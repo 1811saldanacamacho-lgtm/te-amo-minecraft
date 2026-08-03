@@ -78,18 +78,30 @@
   @keyframes bob { 50% { transform: translateY(-9px); } }
   #hint.gone { display: none; }
 
-  #block {
-    width: min(52%, 200px);
+  /* ---------- Cofre ---------- */
+  #chest {
+    position: relative;
+    width: min(54%, 215px);
+    aspect-ratio: 1 / 1;
     animation: hover 2.6s ease-in-out infinite;
     filter: drop-shadow(0 12px 0 rgba(0,0,0,.16));
+    transition: opacity .45s, transform .45s;
   }
   @keyframes hover { 50% { transform: translateY(-16px); } }
-  #block.hit { animation: shake .26s steps(3); }
+  #chest > div { position: absolute; inset: 0; }
+
+  /* La bisagra va en el canto trasero derecho del cofre. */
+  #lid {
+    transform-origin: 74% 14%;
+    transition: transform .45s cubic-bezier(.3,1.5,.5,1);
+  }
+  #chest.abierto #lid { transform: translate(6%, -22%) rotate(24deg); }
+  #chest.sacudida { animation: shake .26s steps(3); }
   @keyframes shake {
     25% { transform: translate(-7px,3px) rotate(-4deg); }
     75% { transform: translate(7px,-3px) rotate(4deg); }
   }
-  #block.broken { display: none; }
+  #chest.ido { opacity: 0; transform: scale(.6) translateY(30px); pointer-events: none; }
 
   /* ---------- Letrero de roble ---------- */
   #sign { display: none; width: 100%; flex-direction: column; align-items: center; }
@@ -108,12 +120,29 @@
     border: 7px solid #3f2a14;
     box-shadow: inset 0 0 0 3px #c8a06a, inset 0 0 22px rgba(0,0,0,.30), 7px 7px 0 rgba(0,0,0,.22);
     padding: 20px 6% 22px;
-    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    display: flex; flex-direction: column; align-items: center; gap: 11px;
   }
-  .board .l1 { width: 80%; }
-  .board .l2 { width: 96%; }
-  .board .hearts { display: flex; gap: 10px; margin-top: 2px; }
+  .board .hearts { display: none; gap: 10px; margin-top: 2px; }
+  .board .hearts.show { display: flex; }
   .board .hearts svg { width: 20px; height: auto; }
+
+  /* ---------- Botones estilo GUI de Minecraft ---------- */
+  #botones { display: flex; gap: 20px; margin-top: 8px; }
+  #botones.gone { display: none; }
+  .btn {
+    cursor: pointer;
+    padding: 9px 17px;
+    border: 3px solid;
+    background: #8b8b8b;
+    border-color: #d2d2d2 #4a4a4a #4a4a4a #d2d2d2;
+    box-shadow: 0 3px 0 rgba(0,0,0,.35);
+    transition: transform .28s cubic-bezier(.3,1.5,.5,1), background .15s, filter .15s;
+  }
+  .btn svg { width: 42px; }
+  .btn:hover { filter: brightness(1.15); }
+  .btn:active { border-color: #4a4a4a #d2d2d2 #d2d2d2 #4a4a4a; box-shadow: none; }
+  #btnSi { background: #4f9c33; border-color: #8ed167 #2b5c19 #2b5c19 #8ed167; }
+  #btnNo { background: #a34038; border-color: #d98079 #5e1f1a #5e1f1a #d98079; }
 
   .posts { display: flex; gap: clamp(60px, 24vw, 130px); }
   .posts span {
@@ -152,11 +181,20 @@
 
   <div class="stage">
     <div id="hint"></div>
-    <div id="block"></div>
+
+    <div id="chest">
+      <div id="base"></div>
+      <div id="lid"></div>
+    </div>
+
     <div id="sign">
       <div class="board" id="board">
-        <div class="l1" id="line1"></div>
-        <div class="l2" id="line2"></div>
+        <div id="line1"></div>
+        <div id="line2"></div>
+        <div id="botones">
+          <button class="btn" id="btnSi"></button>
+          <button class="btn" id="btnNo"></button>
+        </div>
         <div class="hearts" id="signHearts"></div>
       </div>
       <div class="posts"><span></span><span></span></div>
@@ -203,6 +241,14 @@ function outline(rows, char = 'o') {
 }
 
 const dataURI = svg => `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+const pick = (arr, x, y) => arr[(x * 7 + y * 13 + x * y * 3) % arr.length];
+
+function shade(hex, f) {
+  const n = parseInt(hex.slice(1), 16);
+  return '#' + [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+    .map(v => Math.max(0, Math.min(255, Math.round(v * f))).toString(16).padStart(2, '0'))
+    .join('');
+}
 
 /* ==========================================================
    2. Tipografia pixelada 5x7 (estilo Minecraft)
@@ -246,49 +292,61 @@ function pixelText(text, color, shadow = '#2a1608') {
 }
 
 /* ==========================================================
-   3. Bloque de pasto isometrico
+   3. Cofre isometrico
    ========================================================== */
+const WOOD  = ['#a86f2c', '#966124', '#b47a33', '#82521d', '#9c6628'];
+const HERRAJE = '#2b2018';                                    // marcos y banda del cierre
+const LATCH = ['#c9c9c9', '#adadad', '#e2e2e2', '#9a9a9a'];
+const INTERIOR = ['#1d1409', '#241a0d', '#150f06'];
+
+// Cara lateral del cofre: marco oscuro, banda del cierre y, al frente, el candado.
+function chestSide(x, y, conCandado) {
+  if (x === 0 || x === 15 || y === 0 || y === 15) return HERRAJE;
+  if (y === 5 || y === 6) return HERRAJE;
+  if (conCandado && x >= 6 && x <= 9 && y >= 4 && y <= 9) return pick(LATCH, x, y);
+  return pick(WOOD, x, y);
+}
+const chestTop = (x, y) =>
+  (x === 0 || x === 15 || y === 0 || y === 15) ? HERRAJE : pick(WOOD, x, y);
+
+// Dibuja un tramo de filas de una cara, deformado por la matriz isometrica.
+function facePart(getColor, matrix, light, y0, y1) {
+  let r = '';
+  for (let y = y0; y <= y1; y++)
+    for (let x = 0; x < 16; x++)
+      r += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${shade(getColor(x, y), light)}"/>`;
+  return `<g transform="matrix(${matrix})">${r}</g>`;
+}
+
+const VB = `viewBox="-16.5 -0.5 33 33" preserveAspectRatio="xMidYMid meet"`;
+const M_TOP = '1,0.5,-1,0.5,0,0', M_LEFT = '1,0.5,0,1,-16,8', M_RIGHT = '-1,0.5,0,1,16,8';
+const CORTE = 6;   // ultima fila que pertenece a la tapa
+
+// Tapa: cara superior completa y las seis primeras filas de los costados.
+function chestLid() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" ${VB}>`
+    + facePart(chestTop, M_TOP, 1, 0, 15)
+    + facePart((x, y) => chestSide(x, y, true), M_LEFT, .78, 0, CORTE)
+    + facePart((x, y) => chestSide(15 - x, y, false), M_RIGHT, .60, 0, CORTE)
+    + `</svg>`;
+}
+
+// Base: el hueco oscuro del interior y el resto de los costados.
+function chestBase() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" ${VB}>`
+    + facePart((x, y) => pick(INTERIOR, x, y), `1,0.5,-1,0.5,0,${CORTE + 1}`, 1, 0, 15)
+    + facePart((x, y) => chestSide(x, y, true), M_LEFT, .78, CORTE + 1, 15)
+    + facePart((x, y) => chestSide(15 - x, y, false), M_RIGHT, .60, CORTE + 1, 15)
+    + `</svg>`;
+}
+
+// Bloque plano para el suelo: pasto, tierra y piedra en capas.
 const GRASS_TOP  = ['#7cbd4f', '#6fb045', '#88c95c', '#67a83f'];
 const GRASS_SIDE = ['#6aa843', '#5d9a3a', '#76b44c'];
 const DIRT       = ['#8b5a34', '#7d4f2d', '#96633c', '#734829'];
 const PEBBLE     = ['#6b4326', '#5e3a20'];
 const STONE      = ['#7f7f7f', '#6e6e6e', '#8a8a8a', '#636363'];
 
-const pick = (arr, x, y) => arr[(x * 7 + y * 13 + x * y * 3) % arr.length];
-
-// Cara lateral: unas filas de pasto arriba, borde irregular, tierra abajo.
-function sideRows(x, y) {
-  if (y < 3) return pick(GRASS_SIDE, x, y);
-  if (y === 3) return (x % 3 === 0) ? pick(GRASS_SIDE, x, y) : pick(DIRT, x, y);
-  if (y === 4) return (x % 4 === 1) ? pick(GRASS_SIDE, x, y) : pick(DIRT, x, y);
-  return ((x * 5 + y * 11) % 9 === 0) ? pick(PEBBLE, x, y) : pick(DIRT, x, y);
-}
-
-function shade(hex, f) {
-  const n = parseInt(hex.slice(1), 16);
-  return '#' + [(n >> 16) & 255, (n >> 8) & 255, n & 255]
-    .map(v => Math.max(0, Math.min(255, Math.round(v * f))).toString(16).padStart(2, '0'))
-    .join('');
-}
-
-// Cada cara es una rejilla de 16x16 deformada con una matriz isometrica.
-function face(getColor, matrix, light) {
-  let r = '';
-  for (let y = 0; y < 16; y++)
-    for (let x = 0; x < 16; x++)
-      r += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${shade(getColor(x, y), light)}"/>`;
-  return `<g transform="matrix(${matrix})">${r}</g>`;
-}
-
-function isoBlock() {
-  const top   = face((x, y) => pick(GRASS_TOP, x, y), '1,0.5,-1,0.5,0,0', 1);
-  const left  = face(sideRows, '1,0.5,0,1,-16,8', .78);
-  const right = face((x, y) => sideRows(15 - x, y), '-1,0.5,0,1,16,8', .60);
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-16.5 -0.5 33 33" `
-       + `preserveAspectRatio="xMidYMid meet">${top}${left}${right}</svg>`;
-}
-
-// Bloque plano para el suelo: pasto, tierra y piedra en capas.
 function groundTile() {
   let r = '';
   for (let y = 0; y < 32; y++)
@@ -341,18 +399,15 @@ const PETALS = {
 const FLOWER_NAMES = Object.keys(HEADS);
 const randomFlower = () => FLOWER_NAMES[Math.floor(Math.random() * FLOWER_NAMES.length)];
 
-function flowerSVG(name) {
-  return sprite(outline(HEADS[name].concat(STEM)),
-    Object.assign({ s: '#3d7a28', l: '#4d9633', o: '#22140c' }, PETALS[name]));
-}
+const flowerSVG = name => sprite(outline(HEADS[name].concat(STEM)),
+  Object.assign({ s: '#3d7a28', l: '#4d9633', o: '#22140c' }, PETALS[name]));
 
 // Solo la corola, sin tallo: sirve como petalo que cae.
-function petalSVG(name) {
-  return sprite(outline(HEADS[name]), Object.assign({ o: '#22140c' }, PETALS[name]));
-}
+const petalSVG = name => sprite(outline(HEADS[name]),
+  Object.assign({ o: '#22140c' }, PETALS[name]));
 
 /* ==========================================================
-   5. Corazon, arbol y nube
+   5. Corazon, arbol, nube y sol
    ========================================================== */
 const HEART = [
   "..rr...rr..", ".rrrrrrrrr.", "rrrrrrrrrrr", "rrrrrrrrrrr", "rrrrrrrrrrr",
@@ -375,10 +430,6 @@ const TREE = [
   "..LLTLL..", "....T....", "....T....", "....T....", "....T....",
   "....T....", "...TTT..."
 ];
-
-// El sol de Minecraft es un cuadro liso; solo le doy un poco de veta.
-const SUN = Array(8).fill('########');
-const sunSVG = () => sprite(SUN, { '#': ['#fdf3a8', '#fff8c8', '#fbeb92', '#fff5b8'] });
 const treeSVG = () => sprite(outline(TREE), {
   L: ['#4f9b34', '#458c2c', '#59a83c', '#3d7d26'],
   T: ['#6b4a24', '#5c3f1e', '#7a5629'],
@@ -387,6 +438,10 @@ const treeSVG = () => sprite(outline(TREE), {
 
 const CLOUD = ["..####..", ".######.", "########", ".#####.."];
 const cloudSVG = () => sprite(CLOUD, { '#': ['#ffffff', '#f2f7ff', '#e8f0fb'] });
+
+// El sol de Minecraft es un cuadro liso; solo le doy un poco de veta.
+const sunSVG = () => sprite(Array(8).fill('########'),
+  { '#': ['#fdf3a8', '#fff8c8', '#fbeb92', '#fff5b8'] });
 
 /* ==========================================================
    6. Tablon de roble para el letrero
@@ -408,16 +463,27 @@ function planksTile() {
    7. Montaje de la escena
    ========================================================== */
 const HEART_SVG = heartSVG();
+const $ = id => document.getElementById(id);
 
 document.querySelector('.sun').innerHTML = sunSVG();
-document.getElementById('ground').style.backgroundImage = dataURI(groundTile());
-document.getElementById('board').style.backgroundImage = dataURI(planksTile());
-document.getElementById('block').innerHTML = isoBlock();
-document.getElementById('hint').innerHTML = pixelText('HAZ CLICK', '#ffffff', '#31465e');
-document.getElementById('line1').innerHTML = pixelText('TE AMO', '#ff4d6d', '#4a121f');
-document.getElementById('line2').innerHTML = pixelText('FANISITA', '#ffe08a', '#5a3d10');
-document.getElementById('credit').innerHTML = pixelText('CLICK PARA MAS FLORES', '#ffffff', '#3f5a78');
-document.getElementById('signHearts').innerHTML = HEART_SVG.repeat(3);
+$('ground').style.backgroundImage = dataURI(groundTile());
+$('board').style.backgroundImage = dataURI(planksTile());
+$('lid').innerHTML = chestLid();
+$('base').innerHTML = chestBase();
+$('hint').innerHTML = pixelText('HAZ CLICK', '#ffffff', '#31465e');
+$('credit').innerHTML = pixelText('ABRE EL COFRE', '#ffffff', '#3f5a78');
+$('signHearts').innerHTML = HEART_SVG.repeat(3);
+$('btnSi').innerHTML = pixelText('SI', '#ffffff', '#1e3d12');
+$('btnNo').innerHTML = pixelText('NO', '#ffffff', '#43120e');
+
+// Las dos lineas comparten tamano de pixel: el ancho va segun cuantas letras tiene cada una.
+function setLines(a, b, colorA, sombraA, colorB, sombraB) {
+  const max = Math.max(a.length, b.length);
+  $('line1').innerHTML = pixelText(a, colorA, sombraA);
+  $('line2').innerHTML = pixelText(b, colorB, sombraB);
+  $('line1').style.width = (a.length / max * 92) + '%';
+  $('line2').style.width = (b.length / max * 92) + '%';
+}
 
 // Nubes
 for (let i = 0; i < 6; i++) {
@@ -444,7 +510,7 @@ for (let i = 0; i < 6; i++) {
 });
 
 // Jardin
-const garden = document.getElementById('garden');
+const garden = $('garden');
 const MAX_FLORES = 70;
 
 function plantFlower(leftPercent, sprouting = false) {
@@ -464,7 +530,7 @@ for (let i = 0; i < 16; i++) plantFlower(Math.random() * 96);
 /* ==========================================================
    8. Efectos
    ========================================================== */
-const fx = document.getElementById('fx');
+const fx = $('fx');
 
 function spawnHeart(x, y, delay = 0, spread = 130) {
   setTimeout(() => {
@@ -495,8 +561,7 @@ function spawnPetal(delay = 0) {
   }, delay);
 }
 
-function spawnChips(x, y) {
-  const colors = ['#7cbd4f', '#8b5a34', '#6b4326', '#6aa843'];
+function spawnChips(x, y, colors) {
   for (let i = 0; i < 18; i++) {
     const p = document.createElement('div');
     p.className = 'fx-chip';
@@ -524,38 +589,84 @@ function blip(freq, dur = .09, vol = .06) {
 }
 
 /* ==========================================================
-   9. Interaccion
+   9. Guion: cofre -> pregunta -> respuesta
    ========================================================== */
-const block = document.getElementById('block');
-const sign  = document.getElementById('sign');
-const hint  = document.getElementById('hint');
-let opened = false;
+const chest = $('chest'), sign = $('sign'), hint = $('hint'), botones = $('botones');
 
-function openGift() {
-  opened = true;
-  const r = block.getBoundingClientRect();
-  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+// Cada vez que responde NO, el cartel insiste un poco mas.
+const PREGUNTAS = [
+  ['QUIERES SER', 'MI TODO?'],
+  ['ESTAS',       'SEGURA?'],
+  ['PIENSALO',    'BIEN'],
+  ['SEGURA',      'SEGURA?'],
+  ['EL BOTON SI', 'ES MAS BONITO']
+];
 
-  block.classList.add('hit');
-  blip(200, .08); blip(310, .1);
+let fase = 'cerrado';
+let intento = 0;
 
-  setTimeout(() => {
-    block.classList.add('broken');
-    hint.classList.add('gone');
-    spawnChips(cx, cy);
-    sign.classList.add('show');
-
-    [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => blip(f, .15, .05), i * 110));
-    // Abanico ancho para que salgan por los costados del letrero
-    for (let i = 0; i < 22; i++) spawnHeart(cx, cy, i * 65, 560);
-    for (let i = 0; i < 26; i++) spawnPetal(i * 180);
-    // El jardin florece de un lado al otro
-    for (let i = 0; i < 26; i++) setTimeout(() => plantFlower(Math.random() * 96, true), i * 70);
-  }, 260);
+function mostrarPregunta() {
+  const [a, b] = PREGUNTAS[Math.min(intento, PREGUNTAS.length - 1)];
+  setLines(a, b, '#ffffff', '#3a2a12', '#ffe08a', '#5a3d10');
 }
 
+function abrirCofre() {
+  fase = 'pregunta';
+  const r = chest.getBoundingClientRect();
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+
+  chest.classList.add('sacudida');
+  blip(180, .09); blip(260, .11);
+
+  setTimeout(() => {
+    chest.classList.remove('sacudida');
+    chest.classList.add('abierto');
+    spawnChips(cx, cy, ['#a86f2c', '#2b2018', '#c9c9c9', '#82521d']);
+    blip(420, .12); blip(560, .14);
+  }, 260);
+
+  setTimeout(() => {
+    chest.classList.add('ido');
+    hint.classList.add('gone');
+    mostrarPregunta();
+    sign.classList.add('show');
+    $('credit').innerHTML = pixelText('RESPONDE CON EL CORAZON', '#ffffff', '#3f5a78');
+  }, 900);
+}
+
+function decirQueNo() {
+  intento++;
+  mostrarPregunta();
+  blip(300, .1, .05); blip(220, .12, .05);
+  // El NO se va achicando y el SI se hace mas tentador.
+  const k = Math.max(.34, 1 - intento * .16);
+  $('btnNo').style.transform = `scale(${k})`;
+  $('btnSi').style.transform = `scale(${Math.min(1.5, 1 + intento * .1)})`;
+}
+
+function decirQueSi() {
+  fase = 'amor';
+  botones.classList.add('gone');
+  $('signHearts').classList.add('show');
+  setLines('TE AMO', 'FANISITA', '#ff4d6d', '#4a121f', '#ffe08a', '#5a3d10');
+  $('credit').innerHTML = pixelText('CLICK PARA MAS FLORES', '#ffffff', '#3f5a78');
+
+  const r = $('board').getBoundingClientRect();
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+
+  [523, 659, 784, 1047, 1319].forEach((f, i) => setTimeout(() => blip(f, .16, .05), i * 110));
+  // Abanico ancho para que los corazones salgan por los costados del letrero
+  for (let i = 0; i < 26; i++) spawnHeart(cx, cy, i * 60, 620);
+  for (let i = 0; i < 30; i++) spawnPetal(i * 160);
+  for (let i = 0; i < 30; i++) setTimeout(() => plantFlower(Math.random() * 96, true), i * 65);
+}
+
+$('btnSi').addEventListener('pointerdown', e => { e.stopPropagation(); decirQueSi(); });
+$('btnNo').addEventListener('pointerdown', e => { e.stopPropagation(); decirQueNo(); });
+
 document.addEventListener('pointerdown', e => {
-  if (!opened) { openGift(); return; }
+  if (fase === 'cerrado') { abrirCofre(); return; }
+  if (fase !== 'amor') return;            // mientras pregunta, el fondo no responde
   blip(620 + Math.random() * 260, .06, .04);
   for (let i = 0; i < 5; i++) spawnHeart(e.clientX, e.clientY, i * 60);
   for (let i = 0; i < 3; i++) setTimeout(() => plantFlower(Math.random() * 96, true), i * 90);
