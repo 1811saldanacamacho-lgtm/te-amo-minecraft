@@ -5,7 +5,9 @@ un letrero de madera que dice **TE AMO**, con lluvia de corazones.
 
 ## Cómo verla
 
-Abre `te-amo-minecraft.html` con doble click en cualquier navegador. No necesita internet,
+En línea: **https://1811saldanacamacho-lgtm.github.io/te-amo-minecraft/**
+
+O abre `index.html` con doble click en cualquier navegador. No necesita internet,
 ni instalar nada, ni conexión a un servidor.
 
 ## Qué incluye
