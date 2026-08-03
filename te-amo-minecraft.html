@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Te Amo - Minecraft</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    font-family: "Minecraft", "Courier New", monospace;
+    image-rendering: pixelated;
+  }
+
+  body {
+    background: linear-gradient(#5aa9f0 0%, #7cc0f7 55%, #a8d8ff 100%);
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ---------- Cielo ---------- */
+  .cloud {
+    position: absolute;
+    z-index: 1;
+    background: #fff;
+    opacity: .85;
+    box-shadow: 24px 0 0 #fff, 48px 0 0 #fff, 12px -12px 0 #fff, 36px -12px 0 #fff;
+    animation: drift linear infinite;
+  }
+  @keyframes drift {
+    from { transform: translateX(-160px); }
+    to   { transform: translateX(110vw); }
+  }
+
+  .sun {
+    position: absolute;
+    z-index: 1;
+    top: 8%; right: 10%;
+    width: 56px; height: 56px;
+    background: #ffe97a;
+    box-shadow:
+      inset 0 0 0 6px #fff3b0,
+      0 0 0 6px rgba(255,236,150,.30),
+      0 0 0 12px rgba(255,236,150,.15);
+    animation: sunPulse 4s steps(2) infinite;
+  }
+  @keyframes sunPulse {
+    50% {
+      box-shadow:
+        inset 0 0 0 6px #fff3b0,
+        0 0 0 10px rgba(255,236,150,.22),
+        0 0 0 18px rgba(255,236,150,.10);
+    }
+  }
+
+  /* ---------- Suelo ---------- */
+  .ground {
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 100%; height: 96px;
+    background-repeat: repeat-x;
+    background-size: 64px 96px;
+    z-index: 2;
+  }
+
+  /* ---------- Escenario ---------- */
+  .stage {
+    position: relative;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    z-index: 3;
+    padding-bottom: 60px;
+  }
+
+  .hint {
+    color: #fff;
+    font-size: 20px;
+    letter-spacing: 3px;
+    text-shadow: 3px 3px 0 #3f3f3f;
+    animation: bob .9s steps(2) infinite;
+  }
+  @keyframes bob { 50% { transform: translateY(-8px); } }
+  .hint.gone { display: none; }
+
+  #block {
+    width: 128px; height: 128px;
+    animation: float 2.4s ease-in-out infinite;
+    transition: transform .12s steps(2);
+    filter: drop-shadow(0 10px 0 rgba(0,0,0,.18));
+  }
+  @keyframes float { 50% { transform: translateY(-14px); } }
+  #block.hit { animation: shake .25s steps(3); }
+  @keyframes shake {
+    25% { transform: translate(-6px, 2px) rotate(-3deg); }
+    75% { transform: translate(6px, -2px) rotate(3deg); }
+  }
+  #block.broken { display: none; }
+
+  /* ---------- Letrero de madera ---------- */
+  #sign {
+    position: relative;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    z-index: 4;
+  }
+  #sign.show {
+    display: flex;
+    animation: pop .55s cubic-bezier(.2,1.7,.5,1) both, sway 3s ease-in-out .6s infinite;
+  }
+  @keyframes pop {
+    from { transform: scale(0) rotate(-14deg); }
+    to   { transform: scale(1) rotate(0deg); }
+  }
+  @keyframes sway {
+    0%,100% { rotate: -1.5deg; }
+    50%     { rotate: 1.5deg; }
+  }
+
+  .board {
+    background:
+      repeating-linear-gradient(180deg,
+        #9c6b3f 0px, #9c6b3f 12px,
+        #8a5c34 12px, #8a5c34 14px,
+        #a87446 14px, #a87446 26px,
+        #8a5c34 26px, #8a5c34 28px);
+    border: 8px solid #5f3d21;
+    box-shadow:
+      inset 0 0 0 4px #b3814f,
+      8px 8px 0 rgba(0,0,0,.25);
+    padding: 22px 38px 26px;
+    text-align: center;
+  }
+
+  .board .title {
+    font-size: clamp(34px, 9vw, 68px);
+    letter-spacing: 6px;
+    color: #ff5470;
+    text-shadow: 4px 4px 0 #5f1a26, 0 0 0 #000;
+    animation: beat 1.1s ease-in-out infinite;
+  }
+  @keyframes beat { 50% { transform: scale(1.07); } }
+
+  .board .sub {
+    margin-top: 12px;
+    font-size: clamp(11px, 3vw, 16px);
+    letter-spacing: 4px;
+    color: #ffe9b0;
+    text-shadow: 2px 2px 0 #4a2b12;
+  }
+
+  .posts { display: flex; gap: 96px; }
+  .posts span {
+    width: 18px; height: 46px;
+    background: linear-gradient(90deg, #5f3d21 0 6px, #7a5029 6px 12px, #5f3d21 12px 18px);
+  }
+
+  /* ---------- Capa de efectos ---------- */
+  #fx { position: fixed; inset: 0; pointer-events: none; z-index: 9; }
+  .fx-heart { position: absolute; animation: rise 1.9s ease-out forwards; }
+  @keyframes rise {
+    0%   { transform: translate(-50%,-50%) scale(.3) rotate(0deg); opacity: 0; }
+    15%  { transform: translate(-50%,-50%) scale(1.15) rotate(-8deg); opacity: 1; }
+    100% { transform: translate(-50%,-320%) scale(.85) rotate(12deg); opacity: 0; }
+  }
+  .fx-chip { position: absolute; width: 8px; height: 8px; animation: chip .8s linear forwards; }
+  @keyframes chip {
+    from { transform: translate(0,0); opacity: 1; }
+    to   { transform: translate(var(--dx), var(--dy)); opacity: 0; }
+  }
+
+  .credit {
+    position: fixed; bottom: 8px; width: 100%;
+    text-align: center; font-size: 11px; letter-spacing: 2px;
+    color: rgba(255,255,255,.65); text-shadow: 2px 2px 0 rgba(0,0,0,.35);
+    z-index: 10;
+  }
+</style>
+</head>
+<body>
+  <div class="sun"></div>
+  <div class="ground" id="ground"></div>
+
+  <div class="stage">
+    <div class="hint" id="hint">&#9660; HAZ CLICK &#9660;</div>
+    <div id="block"></div>
+    <div id="sign">
+      <div class="board">
+        <div class="title">TE AMO</div>
+        <div class="sub">&#10022; PARA SIEMPRE &#10022;</div>
+      </div>
+      <div class="posts"><span></span><span></span></div>
+    </div>
+  </div>
+
+  <div id="fx"></div>
+  <div class="credit">CLICK EN CUALQUIER LADO PARA MAS CORAZONES</div>
+
+<script>
+/* ============ Utilidades de pixel art ============ */
+const CELL = 6;
+
+function svgFromGrid(grid, colors, cell = CELL) {
+  const h = grid.length, w = grid[0].length;
+  let rects = '';
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const c = colors[grid[y][x]];
+      if (!c) continue;
+      rects += `<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`;
+    }
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w * cell}" height="${h * cell}" `
+       + `viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges">${rects}</svg>`;
+}
+
+/* ---- Corazon estilo Minecraft (con contorno automatico) ---- */
+const HEART_MASK = [
+  "..XX...XX..",
+  ".XXXXXXXXX.",
+  "XXXXXXXXXXX",
+  "XXXXXXXXXXX",
+  "XXXXXXXXXXX",
+  ".XXXXXXXXX.",
+  "..XXXXXXX..",
+  "...XXXXX...",
+  "....XXX....",
+  ".....X....."
+];
+
+function buildHeartGrid() {
+  const w = HEART_MASK[0].length, h = HEART_MASK.length;
+  // Lienzo con 1px de margen para que quepa el contorno
+  const g = Array.from({ length: h + 2 }, () => Array(w + 2).fill('.'));
+  const solid = (y, x) => y >= 0 && y < h && x >= 0 && x < w && HEART_MASK[y][x] === 'X';
+
+  for (let y = -1; y <= h; y++) {
+    for (let x = -1; x <= w; x++) {
+      const gy = y + 1, gx = x + 1;
+      if (solid(y, x)) {
+        // sombra en el borde inferior/derecho
+        g[gy][gx] = (!solid(y + 1, x) || !solid(y, x + 1)) ? 'd' : 'r';
+      } else if (solid(y - 1, x) || solid(y + 1, x) || solid(y, x - 1) || solid(y, x + 1)) {
+        g[gy][gx] = 'o';
+      }
+    }
+  }
+  // brillo del lobulo izquierdo
+  [[2, 3], [2, 4], [3, 3]].forEach(([y, x]) => { g[y][x] = 'w'; });
+  return g.map(row => row.join(''));
+}
+
+const HEART_COLORS = { o: '#3d0912', r: '#e8283f', d: '#a3122a', w: '#ff9db1' };
+const HEART_SVG = svgFromGrid(buildHeartGrid(), HEART_COLORS, 4);
+
+/* ---- Bloque de pasto 16x16 con ruido ---- */
+function grassBlockSVG() {
+  const GRASS = ['#5fa63b', '#6cb844', '#54992f', '#78c44f'];
+  const DIRT  = ['#8a5a3b', '#7b4f33', '#96634221', '#9a6a45'];
+  const STONE = ['#6b452c', '#8a5a3b'];
+  let rects = '';
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 16; x++) {
+      let c;
+      if (y < 3)       c = GRASS[(x * 7 + y * 3) % GRASS.length];
+      else if (y === 3) c = (x % 3 === 0) ? GRASS[1] : DIRT[0];   // borde irregular
+      else if (y === 4) c = (x % 4 === 1) ? GRASS[2] : DIRT[1];
+      else              c = ((x * 5 + y * 11) % 7 === 0) ? STONE[0] : DIRT[(x + y) % 2 ? 0 : 3];
+      rects += `<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`;
+    }
+  }
+  // contorno oscuro
+  rects += '<rect x="0" y="0" width="16" height="16" fill="none" stroke="#3b2617" stroke-width="1"/>';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128" `
+       + `shape-rendering="crispEdges">${rects}</svg>`;
+}
+
+/* ============ Montaje de la escena ============ */
+document.getElementById('block').innerHTML = grassBlockSVG();
+
+// El suelo se repite con background-image: siempre cubre el ancho, sin importar el zoom
+const groundTile = grassBlockSVG().replace('viewBox="0 0 16 16"', 'viewBox="0 0 16 16" preserveAspectRatio="none"');
+document.getElementById('ground').style.backgroundImage =
+  `url("data:image/svg+xml,${encodeURIComponent(groundTile)}")`;
+
+for (let i = 0; i < 5; i++) {
+  const c = document.createElement('div');
+  c.className = 'cloud';
+  const s = 10 + Math.floor(Math.random() * 8);
+  c.style.width = s * 2 + 'px';
+  c.style.height = s + 'px';
+  c.style.top = (5 + Math.random() * 35) + '%';
+  c.style.animationDuration = (26 + Math.random() * 26) + 's';
+  c.style.animationDelay = (-Math.random() * 30) + 's';
+  document.body.appendChild(c);
+}
+
+/* ============ Efectos ============ */
+const fx = document.getElementById('fx');
+
+function spawnHeart(x, y, delay = 0) {
+  setTimeout(() => {
+    const h = document.createElement('div');
+    h.className = 'fx-heart';
+    h.innerHTML = HEART_SVG;
+    const scale = 0.7 + Math.random() * 1.1;
+    h.style.left = (x + (Math.random() * 120 - 60)) + 'px';
+    h.style.top = y + 'px';
+    h.style.zoom = scale;
+    h.style.animationDuration = (1.5 + Math.random()) + 's';
+    fx.appendChild(h);
+    setTimeout(() => h.remove(), 2600);
+  }, delay);
+}
+
+function spawnChips(x, y) {
+  const colors = ['#5fa63b', '#8a5a3b', '#6b452c', '#78c44f'];
+  for (let i = 0; i < 14; i++) {
+    const p = document.createElement('div');
+    p.className = 'fx-chip';
+    p.style.left = x + 'px';
+    p.style.top = y + 'px';
+    p.style.background = colors[i % colors.length];
+    p.style.setProperty('--dx', (Math.random() * 240 - 120) + 'px');
+    p.style.setProperty('--dy', (Math.random() * 160 - 40) + 'px');
+    fx.appendChild(p);
+    setTimeout(() => p.remove(), 900);
+  }
+}
+
+/* Sonidos tipo 8-bit generados al vuelo */
+let audio;
+function blip(freq, dur = 0.09, type = 'square', vol = 0.06) {
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, audio.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + dur);
+    o.connect(g).connect(audio.destination);
+    o.start(); o.stop(audio.currentTime + dur);
+  } catch (e) { /* sin audio, sin drama */ }
+}
+
+/* ============ Interaccion ============ */
+const block = document.getElementById('block');
+const sign  = document.getElementById('sign');
+const hint  = document.getElementById('hint');
+let opened = false;
+
+function openGift() {
+  opened = true;
+  const r = block.getBoundingClientRect();
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+
+  block.classList.add('hit');
+  blip(220, 0.08); blip(330, 0.1);
+
+  setTimeout(() => {
+    block.classList.add('broken');
+    hint.classList.add('gone');
+    spawnChips(cx, cy);
+    sign.classList.add('show');
+    [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => blip(f, 0.14, 'square', 0.05), i * 110));
+    for (let i = 0; i < 18; i++) spawnHeart(cx, cy, i * 70);
+  }, 250);
+}
+
+document.addEventListener('pointerdown', (e) => {
+  if (!opened) { openGift(); return; }
+  blip(660 + Math.random() * 220, 0.06, 'square', 0.04);
+  for (let i = 0; i < 5; i++) spawnHeart(e.clientX, e.clientY, i * 60);
+});
+</script>
+</body>
+</html>
