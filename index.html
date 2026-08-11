@@ -144,6 +144,14 @@
   #btnSi { background: #4f9c33; border-color: #8ed167 #2b5c19 #2b5c19 #8ed167; }
   #btnNo { background: #a34038; border-color: #d98079 #5e1f1a #5e1f1a #d98079; }
 
+  /* Solo aparece cuando ya dijo que si */
+  #masSorpresa {
+    display: none; margin-top: 10px; text-decoration: none;
+    background: #3d5aa8; border-color: #86a2e8 #1f2f5e #1f2f5e #86a2e8;
+  }
+  #masSorpresa.show { display: block; animation: bob 1.4s steps(2) infinite; }
+  #masSorpresa svg { width: 128px; }
+
   .posts { display: flex; gap: clamp(60px, 24vw, 130px); }
   .posts span {
     width: 18px; height: 82px;
@@ -196,6 +204,7 @@
           <button class="btn" id="btnNo"></button>
         </div>
         <div class="hearts" id="signHearts"></div>
+        <a class="btn" id="masSorpresa" href="luz.html"></a>
       </div>
       <div class="posts"><span></span><span></span></div>
     </div>
@@ -650,6 +659,8 @@ function decirQueSi() {
   $('signHearts').classList.add('show');
   setLines('TE AMO', 'FANISITA', '#ff4d6d', '#4a121f', '#ffe08a', '#5a3d10');
   $('credit').innerHTML = pixelText('CLICK PARA MAS FLORES', '#ffffff', '#3f5a78');
+  $('masSorpresa').innerHTML = pixelText('OTRA SORPRESA', '#ffffff', '#16224a');
+  $('masSorpresa').classList.add('show');
 
   const r = $('board').getBoundingClientRect();
   const cx = r.left + r.width / 2, cy = r.top + r.height / 2;

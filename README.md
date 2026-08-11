@@ -1,17 +1,36 @@
 # Te Amo Fanisita ❤️
 
-Animación pixel-art estilo Minecraft: un bloque de pasto flota sobre un prado lleno de flores.
-Al hacer click el bloque se rompe y aparece un letrero de roble que dice **TE AMO FANISITA**,
-mientras el jardín florece y llueven corazones.
+Dos animaciones pixel-art estilo Minecraft.
 
-## Cómo verla
+En la primera, un cofre de roble flota sobre un prado lleno de flores. Al hacer click se abre
+y pregunta **¿QUIERES SER MI TODO?** con botones SÍ y NO. Cada NO insiste un poco más y
+encoge el botón; el SÍ desata un letrero que dice **TE AMO FANISITA**, con el jardín
+floreciendo y una lluvia de corazones.
 
-En línea: **https://1811saldanacamacho-lgtm.github.io/te-amo-minecraft/**
+En la segunda cae la noche: unos ojos pixelados entre las luciérnagas y un letrero que dice
+**ERES LA LUZ DE MI VIDA**.
 
-O abre `index.html` con doble click en cualquier navegador. No necesita internet,
+## Cómo verlas
+
+Son dos páginas:
+
+- **El cofre** — https://1811saldanacamacho-lgtm.github.io/te-amo-minecraft/
+- **La noche de luciérnagas** — https://1811saldanacamacho-lgtm.github.io/te-amo-minecraft/luz.html
+
+La segunda se desbloquea sola desde la primera: aparece un botón cuando responde que sí.
+
+También funcionan con doble click sobre `index.html` o `luz.html`. No necesitan internet,
 ni instalar nada, ni conexión a un servidor.
 
-## Qué incluye
+## La noche de luciérnagas
+
+Retrato pixelado de unos ojos asomándose entre los dedos, dibujado por código: la almendra
+del ojo, el iris, las pestañas y la ceja se generan con curvas, no con un mapa de bits.
+Los ojos parpadean cada cierto tiempo. Alrededor, cielo estrellado, luna cuadrada,
+árboles en penumbra y luciérnagas que vuelan y titilan. Cada click suelta chispas y deja
+luciérnagas nuevas. El letrero dice **ERES LA LUZ DE MI VIDA**.
+
+## Qué incluye el cofre
 
 - **Bloque de pasto isométrico**, con sus tres caras proyectadas en 2:1 como en el juego.
 - **12 flores de Minecraft**: amapola, diente de león, orquídea azul, allium, azulita,

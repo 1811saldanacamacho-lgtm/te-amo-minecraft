@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eres la luz de mi vida</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }
+
+  body {
+    background: linear-gradient(#05070f 0%, #0b1026 38%, #1b1440 70%, #2e1c46 100%);
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  svg { display: block; shape-rendering: crispEdges; }
+
+  /* ---------- Cielo ---------- */
+  #cielo { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+  .estrella {
+    position: absolute;
+    background: #fff;
+    animation: titila ease-in-out infinite;
+  }
+  @keyframes titila { 0%,100% { opacity: .22; } 50% { opacity: 1; } }
+
+  .luna {
+    position: absolute; z-index: 1;
+    top: 8%; left: 10%;
+    width: 58px;
+    filter: drop-shadow(0 0 22px rgba(215,225,255,.45));
+    animation: respira 6s ease-in-out infinite;
+  }
+  @keyframes respira { 50% { transform: scale(1.05); } }
+
+  /* ---------- Luciernagas ---------- */
+  #luces { position: fixed; inset: 0; z-index: 3; pointer-events: none; }
+  .luci {
+    position: absolute;
+    width: 4px; height: 4px;
+    background: #f2ff9e;
+    box-shadow: 0 0 6px 2px rgba(214,255,120,.75), 0 0 16px 6px rgba(160,220,80,.30);
+    animation: vuela ease-in-out infinite alternate, parpadea ease-in-out infinite;
+  }
+  @keyframes vuela {
+    from { transform: translate(0, 0); }
+    to   { transform: translate(var(--dx), var(--dy)); }
+  }
+  @keyframes parpadea { 0%,100% { opacity: .10; } 45% { opacity: 1; } 60% { opacity: .55; } }
+
+  /* ---------- Suelo nocturno ---------- */
+  .suelo {
+    position: absolute; z-index: 2;
+    bottom: 0; left: 0;
+    width: 100%; height: 92px;
+    background-repeat: repeat-x;
+    background-size: 46px 92px;
+  }
+  .arbol {
+    position: absolute; z-index: 2;
+    bottom: 66px;
+    opacity: .92;
+    transform-origin: bottom center;
+    animation: mece 6s ease-in-out infinite;
+  }
+  @keyframes mece { 0%,100% { rotate: -2.5deg; } 50% { rotate: 2.5deg; } }
+
+  /* ---------- Escenario ---------- */
+  .stage {
+    position: relative; z-index: 5;
+    height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 24px;
+    padding-bottom: 86px;
+  }
+
+  /* ---------- Retrato ---------- */
+  #retrato {
+    position: relative;
+    width: min(78%, 430px);
+    aspect-ratio: 112 / 96;
+    border: 6px solid #2a1c14;
+    box-shadow: 0 0 0 3px #6b4a24, 0 0 46px 10px rgba(255,214,120,.20), 8px 8px 0 rgba(0,0,0,.35);
+    animation: flota 5s ease-in-out infinite;
+  }
+  @keyframes flota { 50% { transform: translateY(-10px); } }
+  #retrato canvas {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    image-rendering: pixelated;
+    transition: opacity .06s steps(1);
+  }
+  #cerrados { opacity: 0; }
+  #retrato.parpadeo #abiertos { opacity: 0; }
+  #retrato.parpadeo #cerrados { opacity: 1; }
+
+  /* ---------- Letrero ---------- */
+  #sign { display: flex; width: 100%; flex-direction: column; align-items: center; }
+  #sign { animation: pop .7s cubic-bezier(.2,1.7,.5,1) both, inclina 4s ease-in-out .7s infinite; }
+  @keyframes pop { from { transform: scale(0) rotate(-14deg); } to { transform: scale(1) rotate(0); } }
+  @keyframes inclina { 0%,100% { rotate: -1.3deg; } 50% { rotate: 1.3deg; } }
+
+  .board {
+    width: min(88%, 430px);
+    background-repeat: repeat;
+    background-size: 42px 42px;
+    border: 7px solid #3f2a14;
+    box-shadow: inset 0 0 0 3px #c8a06a, inset 0 0 22px rgba(0,0,0,.38), 7px 7px 0 rgba(0,0,0,.30);
+    padding: 18px 6% 20px;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .board .luciernagas { display: flex; gap: 12px; margin-top: 2px; }
+  .board .luciernagas span {
+    width: 5px; height: 5px; background: #f2ff9e;
+    box-shadow: 0 0 6px 2px rgba(214,255,120,.8);
+    animation: parpadea 2.2s ease-in-out infinite;
+  }
+  .posts { display: flex; gap: clamp(56px, 22vw, 120px); }
+  .posts span {
+    width: 17px; height: 64px;
+    background: linear-gradient(90deg, #3f2a14 0 5px, #6b4a24 5px 12px, #3f2a14 12px 17px);
+  }
+
+  /* ---------- Enlace y pie ---------- */
+  #volver {
+    position: fixed; z-index: 10;
+    top: 14px; right: 14px;
+    padding: 8px 13px;
+    border: 3px solid;
+    background: #6b4a24;
+    border-color: #a87c44 #33210f #33210f #a87c44;
+    box-shadow: 0 3px 0 rgba(0,0,0,.45);
+    cursor: pointer;
+  }
+  #volver svg { width: 72px; }
+  #volver:hover { filter: brightness(1.2); }
+
+  #pie { position: fixed; bottom: 9px; width: 100%; text-align: center; z-index: 10; opacity: .75; }
+  #pie svg { width: 72%; max-width: 290px; margin: 0 auto; }
+
+  /* ---------- Efectos ---------- */
+  #fx { position: fixed; inset: 0; pointer-events: none; z-index: 4; }
+  .chispa {
+    position: absolute; width: 5px; height: 5px;
+    background: #f2ff9e;
+    box-shadow: 0 0 8px 3px rgba(214,255,120,.7);
+    animation: sube 2.4s ease-out forwards;
+  }
+  @keyframes sube {
+    from { transform: translate(0, 0) scale(.4); opacity: 1; }
+    to   { transform: translate(var(--dx), -220px) scale(1.1); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+  <div id="cielo"></div>
+  <div class="luna"></div>
+  <div class="suelo" id="suelo"></div>
+  <div id="luces"></div>
+
+  <div class="stage">
+    <div id="retrato">
+      <canvas id="abiertos" width="112" height="96"></canvas>
+      <canvas id="cerrados" width="112" height="96"></canvas>
+    </div>
+
+    <div id="sign">
+      <div class="board" id="board">
+        <div id="line1"></div>
+        <div id="line2"></div>
+        <div class="luciernagas"><span></span><span></span><span></span></div>
+      </div>
+      <div class="posts"><span></span><span></span></div>
+    </div>
+  </div>
+
+  <div id="fx"></div>
+  <button id="volver"></button>
+  <div id="pie"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const rnd = (a, b) => a + Math.random() * (b - a);
+// Ojo: hay que redondear. Con coordenadas decimales el modulo daba un indice
+// fraccionario y devolvia undefined, dejando zonas enteras sin pintar.
+const pick = (arr, x, y) => {
+  const h = Math.abs(Math.sin(Math.floor(x) * 12.9898 + Math.floor(y) * 78.233) * 43758.5453);
+  return arr[Math.floor((h % 1) * arr.length)];
+};
+
+/* ==========================================================
+   1. Tipografia pixelada 5x7 (estilo Minecraft)
+   ========================================================== */
+const FONT = {
+  A:"01110,10001,10001,11111,10001,10001,10001", B:"11110,10001,10001,11110,10001,10001,11110",
+  C:"01111,10000,10000,10000,10000,10000,01111", D:"11110,10001,10001,10001,10001,10001,11110",
+  E:"11111,10000,10000,11110,10000,10000,11111", F:"11111,10000,10000,11110,10000,10000,10000",
+  G:"01110,10001,10000,10111,10001,10001,01110", H:"10001,10001,10001,11111,10001,10001,10001",
+  I:"11111,00100,00100,00100,00100,00100,11111", J:"00111,00010,00010,00010,00010,10010,01100",
+  K:"10001,10010,10100,11000,10100,10010,10001", L:"10000,10000,10000,10000,10000,10000,11111",
+  M:"10001,11011,10101,10101,10001,10001,10001", N:"10001,11001,10101,10101,10011,10001,10001",
+  O:"01110,10001,10001,10001,10001,10001,01110", P:"11110,10001,10001,11110,10000,10000,10000",
+  Q:"01110,10001,10001,10001,10101,10010,01101", R:"11110,10001,10001,11110,10100,10010,10001",
+  S:"01111,10000,10000,01110,00001,00001,11110", T:"11111,00100,00100,00100,00100,00100,00100",
+  U:"10001,10001,10001,10001,10001,10001,01110", V:"10001,10001,10001,10001,10001,01010,00100",
+  W:"10001,10001,10001,10101,10101,11011,10001", X:"10001,10001,01010,00100,01010,10001,10001",
+  Y:"10001,10001,01010,00100,00100,00100,00100", Z:"11111,00001,00010,00100,01000,10000,11111",
+  "!":"00100,00100,00100,00100,00100,00000,00100", "?":"01110,10001,00001,00110,00100,00000,00100",
+  "<":"00010,00100,01000,10000,01000,00100,00010",
+  ".":"00000,00000,00000,00000,00000,00000,00100", " ":"00000,00000,00000,00000,00000,00000,00000"
+};
+
+// El texto de Minecraft lleva una sombra dura desplazada un pixel.
+function pixelText(text, color, shadow = '#2a1608') {
+  const chars = [...text.toUpperCase()];
+  let main = '', shad = '';
+  chars.forEach((ch, i) => {
+    (FONT[ch] || FONT[' ']).split(',').forEach((row, y) => {
+      [...row].forEach((bit, x) => {
+        if (bit !== '1') return;
+        const px = i * 6 + x;
+        shad += `<rect x="${px + 1}" y="${y + 1}" width="1" height="1" fill="${shadow}"/>`;
+        main += `<rect x="${px}" y="${y}" width="1" height="1" fill="${color}"/>`;
+      });
+    });
+  });
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${chars.length * 6} 8" `
+       + `preserveAspectRatio="xMidYMid meet">${shad}${main}</svg>`;
+}
+
+function setLines(a, b, cA, sA, cB, sB) {
+  const max = Math.max(a.length, b.length);
+  $('line1').innerHTML = pixelText(a, cA, sA);
+  $('line2').innerHTML = pixelText(b, cB, sB);
+  $('line1').style.width = (a.length / max * 92) + '%';
+  $('line2').style.width = (b.length / max * 92) + '%';
+}
+
+/* ==========================================================
+   2. Retrato pixelado: los ojos entre los dedos
+   ========================================================== */
+const PIEL_LUZ    = ['#f2c8b0', '#ead9c0', '#f7d2ba', '#e6bda4', '#efc6ad'];
+const PIEL_MEDIA  = ['#d9a189', '#cf9880', '#e0ab93', '#c98f77'];
+const PIEL_SOMBRA = ['#9a6a56', '#8d604d', '#a5735e', '#835847'];
+const PIEL_HONDA  = ['#5f4034', '#54382d', '#68473a'];
+const CEJA        = ['#2e1c14', '#241510', '#38241a'];
+const PESTANA     = ['#1c110c', '#140b08', '#26160f'];
+const ESCLERA     = ['#e7d9d0', '#ddcdc3', '#f0e5dd'];
+const IRIS        = ['#7a4e2c', '#6b4326', '#8a5a34', '#5d3a20'];
+const IRIS_BORDE  = '#3a2314';
+const PUPILA      = '#150c07';
+
+const W = 112, H = 96;
+
+function nuevoLienzo() {
+  return { px: new Array(W * H).fill(null) };
+}
+const set = (L, x, y, c) => {
+  x = Math.round(x); y = Math.round(y);
+  if (x >= 0 && x < W && y >= 0 && y < H && c) L.px[y * W + x] = c;
+};
+
+// Bandas de piel con borde ondulado: los dedos desenfocados de la foto.
+function bandas(L) {
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      const ondaAlta  = 24 + Math.sin(x / 17) * 5 + Math.sin(x / 6) * 1.5;
+      const ondaBaja  = 72 + Math.sin(x / 14 + 2) * 6 + Math.sin(x / 5) * 1.5;
+      let tono;
+      if (y < ondaAlta - 3)      tono = PIEL_LUZ;
+      else if (y < ondaAlta + 2) tono = PIEL_MEDIA;
+      else if (y > ondaBaja + 3) tono = PIEL_LUZ;
+      else if (y > ondaBaja - 2) tono = PIEL_MEDIA;
+      else if (y < ondaAlta + 12) tono = PIEL_HONDA;    // sombra bajo el dedo
+      else                        tono = PIEL_SOMBRA;
+      set(L, x, y, pick(tono, x, y));
+    }
+}
+
+// Ceja: un arco grueso que se afila hacia la cola.
+function ceja(L, cx, cy, ancho, alto) {
+  for (let t = -1; t <= 1; t += .004) {
+    const x = cx + t * ancho;
+    const y = cy - Math.cos(t * 1.35) * alto + t * t * alto * .8;
+    const grosor = 5.2 * (1 - Math.abs(t) * .55);
+    for (let g = -grosor; g <= grosor; g += .5) set(L, x, y + g, pick(CEJA, x | 0, (y + g) | 0));
+  }
+}
+
+// La almendra del ojo: exponente < 2 para que las esquinas queden en punta.
+const dentro = (x, y, cx, cy, a, b) =>
+  Math.pow(Math.abs((x - cx) / a), 1.5) + Math.pow(Math.abs((y - cy) / b), 1.5);
+
+function ojo(L, cx, cy, a, b, cerrado) {
+  if (cerrado) {
+    // Parpado bajado: solo la linea de la pestana y su sombra.
+    for (let x = cx - a; x <= cx + a; x++) {
+      const t = (x - cx) / a;
+      const y = cy + Math.cos(t * 1.5) * b * .34;
+      for (let g = 0; g < 3; g++) set(L, x, y + g, pick(PESTANA, x | 0, g));
+      set(L, x, y - 1, pick(PIEL_HONDA, x | 0, 1));
+    }
+  } else {
+    for (let y = cy - b - 5; y <= cy + b + 5; y++)
+      for (let x = cx - a - 4; x <= cx + a + 4; x++) {
+        const d = dentro(x, y, cx, cy, a, b);
+        if (d <= 1) {
+          set(L, x, y, pick(ESCLERA, x, y));
+        } else if (d <= 1.30 && y <= cy + b * .35) {
+          set(L, x, y, pick(PESTANA, x, y));            // linea superior gruesa
+        } else if (d <= 1.14) {
+          set(L, x, y, pick(PESTANA, x, y));            // linea inferior fina
+        } else if (d <= 1.5 && y > cy) {
+          set(L, x, y, pick(PIEL_MEDIA, x, y));         // brillo del parpado bajo
+        }
+      }
+
+    // Iris, anillo, pupila y destello
+    const ri = b * 1.04, icx = cx, icy = cy - b * .10;
+    for (let y = icy - ri - 1; y <= icy + ri + 1; y++)
+      for (let x = icx - ri - 1; x <= icx + ri + 1; x++) {
+        if (dentro(x, y, cx, cy, a, b) > 1) continue;   // recortado por el parpado
+        const r = Math.hypot(x - icx, y - icy);
+        if (r <= ri * .42) set(L, x, y, PUPILA);
+        else if (r <= ri * .88) set(L, x, y, pick(IRIS, x, y));
+        else if (r <= ri) set(L, x, y, IRIS_BORDE);
+      }
+    set(L, icx - ri * .40, icy - ri * .42, '#ffffff');
+    set(L, icx - ri * .40 + 1, icy - ri * .42, '#f2e9e4');
+    set(L, icx - ri * .40, icy - ri * .42 + 1, '#f2e9e4');
+  }
+
+  // Pestanas largas: puas hacia afuera siguiendo el borde de arriba.
+  for (let t = -.92; t <= .92; t += .085) {
+    const bx = cx + t * a * .99;
+    const by = cy - Math.pow(1 - Math.pow(Math.abs(t), 1.5), 1 / 1.5) * b;
+    const largo = 4 + 3 * (1 - Math.abs(t));
+    for (let s = 0; s < largo; s++)
+      set(L, bx + t * s * .85, by - s * .92 + (cerrado ? b * .5 : 0), pick(PESTANA, bx | 0, s));
+  }
+}
+
+function pintar(L, ctx) {
+  ctx.clearRect(0, 0, W, H);
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      const c = L.px[y * W + x];
+      if (!c) continue;
+      ctx.fillStyle = c;
+      ctx.fillRect(x, y, 1, 1);
+    }
+}
+
+// El dedo de abajo vuelve a pasar por encima y corta el ojo izquierdo.
+function dedoDelante(L) {
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      const borde = 72 + Math.sin(x / 14 + 2) * 6 + Math.sin(x / 5) * 1.5;
+      if (y > borde + 3) set(L, x, y, pick(PIEL_LUZ, x, y));
+      else if (y > borde - 2) set(L, x, y, pick(PIEL_MEDIA, x, y));
+    }
+}
+
+function retrato(cerrado) {
+  const L = nuevoLienzo();
+  bandas(L);
+  ceja(L, 70, 36, 27, 8);                    // ceja del ojo derecho
+  ojo(L, 24, 66, 17, 9, cerrado);            // ojo izquierdo, medio tapado
+  ojo(L, 70, 55, 20, 11, cerrado);           // ojo derecho, el protagonista
+  dedoDelante(L);
+  return L;
+}
+
+pintar(retrato(false), $('abiertos').getContext('2d'));
+pintar(retrato(true),  $('cerrados').getContext('2d'));
+
+// Parpadeo cada tanto
+setInterval(() => {
+  $('retrato').classList.add('parpadeo');
+  setTimeout(() => $('retrato').classList.remove('parpadeo'), 140);
+}, 4200);
+
+/* ==========================================================
+   3. Cielo, suelo y luciernagas
+   ========================================================== */
+const cielo = $('cielo');
+for (let i = 0; i < 140; i++) {
+  const s = document.createElement('div');
+  s.className = 'estrella';
+  const t = Math.random() < .82 ? 2 : 3;
+  s.style.width = t + 'px';
+  s.style.height = t + 'px';
+  s.style.left = rnd(0, 100) + '%';
+  s.style.top = rnd(0, 78) + '%';
+  s.style.opacity = rnd(.2, 1);
+  s.style.animationDuration = rnd(1.6, 5) + 's';
+  s.style.animationDelay = -rnd(0, 5) + 's';
+  cielo.appendChild(s);
+}
+
+const luces = $('luces');
+function luciernaga(x, y) {
+  const l = document.createElement('div');
+  l.className = 'luci';
+  l.style.left = (x ?? rnd(0, 99)) + '%';
+  l.style.top = (y ?? rnd(20, 92)) + '%';
+  l.style.setProperty('--dx', rnd(-90, 90) + 'px');
+  l.style.setProperty('--dy', rnd(-70, 40) + 'px');
+  l.style.animationDuration = rnd(5, 12) + 's, ' + rnd(1.4, 3.6) + 's';
+  l.style.animationDelay = -rnd(0, 6) + 's, ' + -rnd(0, 4) + 's';
+  const t = rnd(3, 6) | 0;
+  l.style.width = t + 'px'; l.style.height = t + 'px';
+  luces.appendChild(l);
+}
+for (let i = 0; i < 55; i++) luciernaga();
+
+// Luna y suelo, dibujados como sprites de pixeles
+function spriteSVG(rows, palette) {
+  const h = rows.length, w = rows[0].length;
+  let out = '';
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      const p = palette[rows[y][x]];
+      if (!p) continue;
+      out += `<rect x="${x}" y="${y}" width="1" height="1" fill="${Array.isArray(p) ? pick(p, x, y) : p}"/>`;
+    }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" `
+       + `preserveAspectRatio="xMidYMax meet">${out}</svg>`;
+}
+
+document.querySelector('.luna').innerHTML =
+  spriteSVG(Array(8).fill('########'), { '#': ['#e8ecff', '#d3daf5', '#f2f5ff', '#c4cdea'] });
+
+const NOCHE_PASTO = ['#25452a', '#1e3a23', '#2c5031'];
+const NOCHE_TIERRA = ['#2a2018', '#221a13', '#31261c'];
+const NOCHE_PIEDRA = ['#22242b', '#1b1d23', '#292c34'];
+
+function sueloTile() {
+  let r = '';
+  for (let y = 0; y < 32; y++)
+    for (let x = 0; x < 16; x++) {
+      const c = y < 4 ? pick(NOCHE_PASTO, x, y)
+              : y < 18 ? pick(NOCHE_TIERRA, x, y)
+              : pick(NOCHE_PIEDRA, x, y);
+      r += `<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`;
+    }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 32" preserveAspectRatio="none">${r}</svg>`;
+}
+$('suelo').style.backgroundImage =
+  `url("data:image/svg+xml,${encodeURIComponent(sueloTile())}")`;
+
+const ARBOL = [
+  "..LLLLL..", ".LLLLLLL.", "LLLLLLLLL", "LLLLLLLLL", ".LLLLLLL.",
+  "..LLTLL..", "....T....", "....T....", "....T....", "....T....",
+  "....T....", "...TTT..."
+];
+[[3, 104], [86, 96], [17, 78], [74, 84]].forEach(([left, w], i) => {
+  const t = document.createElement('div');
+  t.className = 'arbol';
+  t.innerHTML = spriteSVG(ARBOL, {
+    L: ['#1f3d26', '#193320', '#24472c'], T: ['#2b2118', '#221a13']
+  });
+  t.style.left = left + '%';
+  t.style.width = w + 'px';
+  t.style.animationDelay = (-i * 1.5) + 's';
+  document.body.appendChild(t);
+});
+
+/* ==========================================================
+   4. Textos e interaccion
+   ========================================================== */
+setLines('ERES LA LUZ', 'DE MI VIDA', '#ffe9a3', '#5a3d10', '#fff8dc', '#4a3a12');
+$('volver').innerHTML = pixelText('< VOLVER', '#ffffff', '#2c1c0a');
+$('pie').innerHTML = pixelText('CLICK PARA MAS LUCIERNAGAS', '#cfd6ff', '#1a1f3d');
+
+$('volver').addEventListener('pointerdown', e => {
+  e.stopPropagation();
+  location.href = 'index.html';
+});
+
+const fx = $('fx');
+document.addEventListener('pointerdown', e => {
+  for (let i = 0; i < 14; i++) {
+    const c = document.createElement('div');
+    c.className = 'chispa';
+    c.style.left = (e.clientX + rnd(-26, 26)) + 'px';
+    c.style.top = (e.clientY + rnd(-26, 26)) + 'px';
+    c.style.setProperty('--dx', rnd(-110, 110) + 'px');
+    c.style.animationDuration = rnd(1.8, 3.2) + 's';
+    fx.appendChild(c);
+    setTimeout(() => c.remove(), 3400);
+  }
+  // Cada click deja luciernagas nuevas que se quedan volando
+  for (let i = 0; i < 3; i++)
+    luciernaga(e.clientX / innerWidth * 100, e.clientY / innerHeight * 100);
+});
+</script>
+</body>
+</html>
