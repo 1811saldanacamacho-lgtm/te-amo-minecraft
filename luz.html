@@ -77,12 +77,12 @@
   }
 
   /* ---------- Retrato ---------- */
+  /* Sin marco: los ojos flotan en la noche y la piel se disuelve en el aire. */
   #retrato {
     position: relative;
-    width: min(78%, 430px);
-    aspect-ratio: 112 / 96;
-    border: 6px solid #2a1c14;
-    box-shadow: 0 0 0 3px #6b4a24, 0 0 46px 10px rgba(255,214,120,.20), 8px 8px 0 rgba(0,0,0,.35);
+    width: min(92%, 580px);
+    aspect-ratio: 170 / 84;
+    filter: drop-shadow(0 0 34px rgba(255,214,140,.22));
     animation: flota 5s ease-in-out infinite;
   }
   @keyframes flota { 50% { transform: translateY(-10px); } }
@@ -162,8 +162,8 @@
 
   <div class="stage">
     <div id="retrato">
-      <canvas id="abiertos" width="112" height="96"></canvas>
-      <canvas id="cerrados" width="112" height="96"></canvas>
+      <canvas id="abiertos" width="170" height="84"></canvas>
+      <canvas id="cerrados" width="170" height="84"></canvas>
     </div>
 
     <div id="sign">
@@ -241,10 +241,11 @@ function setLines(a, b, cA, sA, cB, sB) {
 /* ==========================================================
    2. Retrato pixelado: los ojos entre los dedos
    ========================================================== */
-const PIEL_LUZ    = ['#f2c8b0', '#ead9c0', '#f7d2ba', '#e6bda4', '#efc6ad'];
-const PIEL_MEDIA  = ['#d9a189', '#cf9880', '#e0ab93', '#c98f77'];
-const PIEL_SOMBRA = ['#9a6a56', '#8d604d', '#a5735e', '#835847'];
-const PIEL_HONDA  = ['#5f4034', '#54382d', '#68473a'];
+// Piel de noche: mas apagada y calida, como alumbrada por las luciernagas.
+const PIEL_LUZ    = ['#d3a68d', '#c99b81', '#dcb096', '#c09277'];
+const PIEL_MEDIA  = ['#b98a72', '#ad7f68', '#c2937a', '#a3765f'];
+const PIEL_SOMBRA = ['#8a6150', '#7e5747', '#946a58', '#734f40'];
+const PIEL_HONDA  = ['#57392e', '#4d3228', '#603f33'];
 const CEJA        = ['#2e1c14', '#241510', '#38241a'];
 const PESTANA     = ['#1c110c', '#140b08', '#26160f'];
 const ESCLERA     = ['#e7d9d0', '#ddcdc3', '#f0e5dd'];
@@ -252,7 +253,7 @@ const IRIS        = ['#7a4e2c', '#6b4326', '#8a5a34', '#5d3a20'];
 const IRIS_BORDE  = '#3a2314';
 const PUPILA      = '#150c07';
 
-const W = 112, H = 96;
+const W = 170, H = 84;
 
 function nuevoLienzo() {
   return { px: new Array(W * H).fill(null) };
@@ -262,19 +263,23 @@ const set = (L, x, y, c) => {
   if (x >= 0 && x < W && y >= 0 && y < H && c) L.px[y * W + x] = c;
 };
 
-// Bandas de piel con borde ondulado: los dedos desenfocados de la foto.
-function bandas(L) {
-  for (let y = 0; y < H; y++)
-    for (let x = 0; x < W; x++) {
-      const ondaAlta  = 24 + Math.sin(x / 17) * 5 + Math.sin(x / 6) * 1.5;
-      const ondaBaja  = 72 + Math.sin(x / 14 + 2) * 6 + Math.sin(x / 5) * 1.5;
-      let tono;
-      if (y < ondaAlta - 3)      tono = PIEL_LUZ;
-      else if (y < ondaAlta + 2) tono = PIEL_MEDIA;
-      else if (y > ondaBaja + 3) tono = PIEL_LUZ;
-      else if (y > ondaBaja - 2) tono = PIEL_MEDIA;
-      else if (y < ondaAlta + 12) tono = PIEL_HONDA;    // sombra bajo el dedo
-      else                        tono = PIEL_SOMBRA;
+// Difuminado ordenado: en vez de un borde duro, la piel se deshace en pixeles sueltos.
+const BAYER = [[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
+
+// Mancha de piel alrededor de un ojo, que se disuelve hacia la oscuridad.
+function parche(L, cx, cy, rx, ry) {
+  for (let y = Math.floor(cy - ry); y <= cy + ry; y++)
+    for (let x = Math.floor(cx - rx); x <= cx + rx; x++) {
+      const t = Math.hypot((x - cx) / rx, (y - cy) / ry);
+      if (t > 1) continue;
+      const desvanece = Math.max(0, (t - .45) / .55);
+      const umbral = (BAYER[((y % 4) + 4) % 4][((x % 4) + 4) % 4] + .5) / 16;
+      if (desvanece > umbral) continue;
+      // Mas oscuro arriba (el hueco de la cuenca) y mas claro en el pomulo.
+      const tono = y < cy - ry * .45 ? PIEL_HONDA
+                 : y < cy - ry * .12 ? PIEL_SOMBRA
+                 : y > cy + ry * .35 ? PIEL_LUZ
+                 : PIEL_MEDIA;
       set(L, x, y, pick(tono, x, y));
     }
 }
@@ -353,23 +358,16 @@ function pintar(L, ctx) {
     }
 }
 
-// El dedo de abajo vuelve a pasar por encima y corta el ojo izquierdo.
-function dedoDelante(L) {
-  for (let y = 0; y < H; y++)
-    for (let x = 0; x < W; x++) {
-      const borde = 72 + Math.sin(x / 14 + 2) * 6 + Math.sin(x / 5) * 1.5;
-      if (y > borde + 3) set(L, x, y, pick(PIEL_LUZ, x, y));
-      else if (y > borde - 2) set(L, x, y, pick(PIEL_MEDIA, x, y));
-    }
-}
-
 function retrato(cerrado) {
   const L = nuevoLienzo();
-  bandas(L);
-  ceja(L, 70, 36, 27, 8);                    // ceja del ojo derecho
-  ojo(L, 24, 66, 17, 9, cerrado);            // ojo izquierdo, medio tapado
-  ojo(L, 70, 55, 20, 11, cerrado);           // ojo derecho, el protagonista
-  dedoDelante(L);
+  // Primero la piel, para que las pestanas y el iris queden encima.
+  // Los centros van separados casi un ancho de ojo, como en un rostro de verdad.
+  parche(L, 46, 52, 30, 27);
+  parche(L, 122, 48, 34, 30);
+  ceja(L, 46, 34, 23, 7);
+  ceja(L, 122, 28, 28, 8);
+  ojo(L, 46, 52, 19, 10.5, cerrado);
+  ojo(L, 122, 48, 22, 12, cerrado);           // el ojo protagonista, un poco mas grande
   return L;
 }
 
