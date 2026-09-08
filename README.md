@@ -12,27 +12,24 @@ En la segunda cae la noche: unos ojos pixelados entre las luciérnagas y un letr
 
 ## Cómo verlas
 
-Son tres páginas:
+Son dos páginas:
 
 - **El cofre** — https://1811saldanacamacho-lgtm.github.io/te-amo-minecraft/
 - **La noche de luciérnagas** — https://1811saldanacamacho-lgtm.github.io/te-amo-minecraft/luz.html
-- **La canción** — https://1811saldanacamacho-lgtm.github.io/te-amo-minecraft/cancion.html
 
-Van encadenadas: la segunda se desbloquea desde la primera cuando responde que sí, y de
-ahí se pasa a la tercera.
+La segunda se desbloquea desde la primera: aparece un botón cuando responde que sí.
 
-También funcionan con doble click sobre cualquiera de los tres archivos. No necesitan
+También funcionan con doble click sobre cualquiera de los dos archivos. No necesitan
 internet, ni instalar nada, ni conexión a un servidor.
 
 ## La canción
 
-Letra estilo karaoke: los renglones suben solos y cada uno se va encendiendo de izquierda
-a derecha, como si lo fueran cantando. Arriba y abajo quedan los renglones vecinos
-apagados y desenfocados, con una barra de avance al pie. De fondo, estrellas, un foco que
-late y notas musicales que suben; cada click suelta más.
+Debajo de los ojos corre la letra estilo karaoke: los renglones suben solos y cada uno se
+va encendiendo de izquierda a derecha, como si lo fueran cantando. Arriba y abajo quedan
+los renglones vecinos apagados y desenfocados, difuminándose hacia los bordes.
 
-**Para poner otra letra** se cambia nada más el arreglo `LETRA` al inicio de
-`cancion.html`: cada renglón es `{ t: 'TEXTO', d: segundos }`. El tamaño de la letra, el
+**Para poner otra letra** se cambia nada más el arreglo `LETRA` al inicio del script de
+`luz.html`: cada renglón es `{ t: 'TEXTO', d: segundos }`. El tamaño de la letra, el
 centrado y los tiempos se acomodan solos a partir de eso. Un renglón con texto vacío sirve
 de respiro entre estrofas. Sólo mayúsculas y sin acentos, que es lo que dibuja la fuente.
 
@@ -57,8 +54,7 @@ de verdad: se lee dónde está cada una en la pantalla y se comprime la escena d
 disco del iris, invertida, como en cualquier reflejo.
 
 Alrededor, cielo estrellado, luna cuadrada, árboles en penumbra y luciérnagas que vuelan y
-titilan. Cada click suelta chispas y deja luciérnagas nuevas. El letrero dice
-**ERES LA LUZ DE MI VIDA**.
+titilan. Cada click suelta chispas y deja luciérnagas nuevas.
 
 ## Qué incluye el cofre
 

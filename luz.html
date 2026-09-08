@@ -80,7 +80,7 @@
   /* Sin marco: los ojos flotan en la noche y la piel se disuelve en el aire. */
   #retrato {
     position: relative;
-    width: min(92%, 580px);
+    width: min(80%, 500px);
     aspect-ratio: 170 / 84;
     filter: drop-shadow(0 0 34px rgba(255,214,140,.22));
     animation: flota 5s ease-in-out infinite;
@@ -99,37 +99,46 @@
   #reflejos { pointer-events: none; }
   #retrato.parpadeo #reflejos { opacity: 0; }
 
-  /* ---------- Letrero ---------- */
-  #sign { display: flex; width: 100%; flex-direction: column; align-items: center; }
-  #sign { animation: pop .7s cubic-bezier(.2,1.7,.5,1) both, inclina 4s ease-in-out .7s infinite; }
-  @keyframes pop { from { transform: scale(0) rotate(-14deg); } to { transform: scale(1) rotate(0); } }
-  @keyframes inclina { 0%,100% { rotate: -1.3deg; } 50% { rotate: 1.3deg; } }
-
-  .board {
-    width: min(88%, 430px);
-    background-repeat: repeat;
-    background-size: 42px 42px;
-    border: 7px solid #3f2a14;
-    box-shadow: inset 0 0 0 3px #c8a06a, inset 0 0 22px rgba(0,0,0,.38), 7px 7px 0 rgba(0,0,0,.30);
-    padding: 18px 6% 20px;
-    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  /* ---------- La cancion, debajo de los ojos ---------- */
+  #ventana {
+    position: relative;
+    width: 100%;
+    height: calc(var(--alto-linea) * 3);
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent);
+            mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent);
   }
-  .board .luciernagas { display: flex; gap: 12px; margin-top: 2px; }
-  .board .luciernagas span {
-    width: 5px; height: 5px; background: #f2ff9e;
-    box-shadow: 0 0 6px 2px rgba(214,255,120,.8);
-    animation: parpadea 2.2s ease-in-out infinite;
+  #letra {
+    position: absolute; left: 0; right: 0;
+    top: var(--alto-linea);
+    transition: transform .6s cubic-bezier(.25,.9,.3,1);
   }
-  .posts { display: flex; gap: clamp(56px, 22vw, 120px); }
-  .posts span {
-    width: 17px; height: 64px;
-    background: linear-gradient(90deg, #3f2a14 0 5px, #6b4a24 5px 12px, #3f2a14 12px 17px);
+  .linea {
+    position: relative;
+    height: var(--alto-linea);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0;
+    transition: opacity .5s, filter .5s;
+    filter: blur(.6px);
   }
+  .linea.activa { filter: none; animation: respira 2.6s ease-in-out infinite; }
+  @keyframes respira { 50% { transform: scale(1.05); } }
+  /* El par toma el ancho del texto: es lo que hace que la capa encendida
+     caiga justo encima de la apagada. */
+  .linea .par { position: relative; height: var(--alto-texto); }
+  .linea .capa { height: 100%; }
+  .linea .capa svg { height: 100%; width: auto; }
+  /* La capa encendida se recorta de izquierda a derecha, como si la cantaran. */
+  .linea .encendida {
+    position: absolute; left: 0; top: 0;
+    clip-path: inset(0 100% 0 0);
+  }
+  .linea.activa .encendida { filter: drop-shadow(0 0 10px rgba(255,214,140,.55)); }
 
   /* ---------- Enlace y pie ---------- */
-  #volver, #cancion {
+  #volver {
     position: fixed; z-index: 10;
-    top: 14px;
+    top: 14px; right: 14px;
     padding: 8px 13px;
     border: 3px solid;
     background: #6b4a24;
@@ -137,11 +146,8 @@
     box-shadow: 0 3px 0 rgba(0,0,0,.45);
     cursor: pointer;
   }
-  #volver { right: 14px; }
-  #cancion { left: 14px; background: #5b3a8a; border-color: #9a78d0 #2e1a4a #2e1a4a #9a78d0; }
   #volver svg { width: 72px; }
-  #cancion svg { width: 96px; }
-  #volver:hover, #cancion:hover { filter: brightness(1.2); }
+  #volver:hover { filter: brightness(1.2); }
 
   #pie { position: fixed; bottom: 9px; width: 100%; text-align: center; z-index: 10; opacity: .75; }
   #pie svg { width: 72%; max-width: 290px; margin: 0 auto; }
@@ -173,18 +179,10 @@
       <canvas id="reflejos" width="170" height="84"></canvas>
     </div>
 
-    <div id="sign">
-      <div class="board" id="board">
-        <div id="line1"></div>
-        <div id="line2"></div>
-        <div class="luciernagas"><span></span><span></span><span></span></div>
-      </div>
-      <div class="posts"><span></span><span></span></div>
-    </div>
+    <div id="ventana"><div id="letra"></div></div>
   </div>
 
   <div id="fx"></div>
-  <button id="cancion"></button>
   <button id="volver"></button>
   <div id="pie"></div>
 
@@ -238,13 +236,37 @@ function pixelText(text, color, shadow = '#2a1608') {
        + `preserveAspectRatio="xMidYMid meet">${shad}${main}</svg>`;
 }
 
-function setLines(a, b, cA, sA, cB, sB) {
-  const max = Math.max(a.length, b.length);
-  $('line1').innerHTML = pixelText(a, cA, sA);
-  $('line2').innerHTML = pixelText(b, cB, sB);
-  $('line1').style.width = (a.length / max * 92) + '%';
-  $('line2').style.width = (b.length / max * 92) + '%';
-}
+/* ==========================================================
+   LA LETRA
+   ----------------------------------------------------------
+   Cada renglon es { t: texto, d: cuantos segundos dura }.
+   Para poner otra letra se cambia nada mas este arreglo: el
+   tamano, el centrado y los tiempos se acomodan solos.
+   Un renglon vacio sirve de respiro entre estrofas.
+   Solo mayusculas y sin acentos, que es lo que dibuja la fuente.
+   ========================================================== */
+const LETRA = [
+  { t: 'FANISITA',             d: 3.0 },
+  { t: 'DESDE QUE TE VI',      d: 3.2 },
+  { t: 'SE ME OLVIDA TODO',    d: 3.4 },
+  { t: 'MENOS TU NOMBRE',      d: 3.6 },
+  { t: '',                     d: 1.2 },
+  { t: 'ERES LA LUZ',          d: 3.0 },
+  { t: 'DE MI VIDA',           d: 3.4 },
+  { t: '',                     d: 1.2 },
+  { t: 'TUS OJOS ME ALUMBRAN', d: 3.8 },
+  { t: 'CUANDO TODO ESTA',     d: 3.0 },
+  { t: 'OSCURO',               d: 2.6 },
+  { t: 'NO SE COMO LE HACES',  d: 3.6 },
+  { t: 'PERO ME HACES BIEN',   d: 3.6 },
+  { t: '',                     d: 1.2 },
+  { t: 'SI ME PREGUNTAN',      d: 3.2 },
+  { t: 'QUE ES LA FELICIDAD',  d: 3.6 },
+  { t: 'DIGO TU NOMBRE',       d: 3.0 },
+  { t: 'Y YA',                 d: 2.4 },
+  { t: '',                     d: 1.4 },
+  { t: 'TE AMO FANISITA',      d: 5.0 }
+];
 
 /* ==========================================================
    2. Retrato pixelado: los ojos entre los dedos
@@ -511,6 +533,78 @@ function dibujarOjos() {
   pintar(retrato(true),  $('cerrados').getContext('2d'));
 }
 
+/* ==========================================================
+   2b. La cancion: renglones que suben y se van encendiendo
+   ========================================================== */
+const APAGADO = '#6f6a9c', APAGADO_S = '#171334';
+const ENCENDIDO = '#ffe9a3', ENCENDIDO_S = '#5a3410';
+
+const contLetra = $('letra');
+const renglones = LETRA.map(({ t }) => {
+  const div = document.createElement('div');
+  div.className = 'linea';
+  if (t) {
+    div.innerHTML = `<div class="par">`
+                  +   `<div class="capa apagada">${pixelText(t, APAGADO, APAGADO_S)}</div>`
+                  +   `<div class="capa encendida">${pixelText(t, ENCENDIDO, ENCENDIDO_S)}</div>`
+                  + `</div>`;
+  }
+  contLetra.appendChild(div);
+  return div;
+});
+
+// El renglon mas largo manda: de ahi sale el tamano de pixel que cabe.
+const MAS_LARGO = Math.max(...LETRA.map(l => l.t.length), 1);
+function medirLetra() {
+  // Ancho de un renglon = caracteres * 6 * (alto / 8). Se despeja el alto.
+  const cabeAncho = (innerWidth * .88) / (MAS_LARGO * 0.75);
+  const cabeAlto  = (innerHeight * .30) / (3 * 1.75);   // el bloque ocupa ~30% del alto
+  const alto = Math.max(11, Math.min(38, cabeAncho, cabeAlto));
+  const raiz = document.documentElement.style;
+  raiz.setProperty('--alto-texto', alto + 'px');
+  raiz.setProperty('--alto-linea', Math.round(alto * 1.75) + 'px');
+  return Math.round(alto * 1.75);
+}
+let altoRenglon = medirLetra();
+
+let renglonActual = -1;
+function colocarLetra(i) {
+  contLetra.style.transform = `translateY(${-i * altoRenglon}px)`;
+  renglones.forEach((el, k) => {
+    const d = Math.abs(k - i);
+    el.style.opacity = d === 0 ? 1 : d === 1 ? .34 : 0;
+    el.classList.toggle('activa', k === i);
+  });
+}
+
+const INICIOS = [];
+let totalLetra = 0;
+LETRA.forEach(l => { INICIOS.push(totalLetra); totalLetra += l.d; });
+
+let t0 = performance.now();
+
+function actualizarLetra(ahora) {
+  let t = (ahora - t0) / 1000;
+  if (t >= totalLetra) { t0 = ahora; t = 0; }           // vuelve a empezar
+
+  let i = 0;
+  while (i < LETRA.length - 1 && t >= INICIOS[i + 1]) i++;
+  if (i !== renglonActual) { renglonActual = i; colocarLetra(i); }
+
+  const p = Math.min(1, (t - INICIOS[i]) / LETRA[i].d);
+  renglones.forEach((el, k) => {
+    const luz = el.querySelector('.encendida');
+    if (!luz) return;
+    const q = k < i ? 1 : k > i ? 0 : p;
+    luz.style.clipPath = `inset(0 ${(1 - q) * 100}% 0 0)`;
+  });
+}
+
+addEventListener('resize', () => {
+  altoRenglon = medirLetra();
+  if (renglonActual >= 0) colocarLetra(renglonActual);
+});
+
 // Parpadeo cada tanto
 setInterval(() => {
   $('retrato').classList.add('parpadeo');
@@ -606,19 +700,12 @@ const ARBOL = [
 /* ==========================================================
    4. Textos e interaccion
    ========================================================== */
-setLines('ERES LA LUZ', 'DE MI VIDA', '#ffe9a3', '#5a3d10', '#fff8dc', '#4a3a12');
 $('volver').innerHTML = pixelText('< VOLVER', '#ffffff', '#2c1c0a');
 $('pie').innerHTML = pixelText('CLICK PARA MAS LUCIERNAGAS', '#cfd6ff', '#1a1f3d');
 
 $('volver').addEventListener('pointerdown', e => {
   e.stopPropagation();
   location.href = 'index.html';
-});
-
-$('cancion').innerHTML = pixelText('LA CANCION', '#ffffff', '#241340');
-$('cancion').addEventListener('pointerdown', e => {
-  e.stopPropagation();
-  location.href = 'cancion.html';
 });
 
 /* --- Reflejos de las luciernagas dentro del iris ---
@@ -629,9 +716,10 @@ const REFLEJADAS = [...luces.children].slice(0, 10);
 const ctxRef = $('reflejos').getContext('2d');
 let ultimoRef = 0;
 
-function pintarReflejos(ahora) {
-  requestAnimationFrame(pintarReflejos);
-  if (ahora - ultimoRef < 55) return;                    // ~18 cuadros por segundo
+function bucle(ahora) {
+  requestAnimationFrame(bucle);
+  actualizarLetra(ahora);                                // la letra, cuadro a cuadro
+  if (ahora - ultimoRef < 55) return;                    // los reflejos, ~18 por segundo
   ultimoRef = ahora;
   ctxRef.clearRect(0, 0, W, H);
   const t = ahora / 1000;
@@ -660,7 +748,8 @@ function pintarReflejos(ahora) {
 }
 
 dibujarOjos();
-requestAnimationFrame(pintarReflejos);
+colocarLetra(0);
+requestAnimationFrame(bucle);
 
 const fx = $('fx');
 document.addEventListener('pointerdown', e => {
