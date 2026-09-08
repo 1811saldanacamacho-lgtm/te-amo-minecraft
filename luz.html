@@ -127,9 +127,9 @@
   }
 
   /* ---------- Enlace y pie ---------- */
-  #volver {
+  #volver, #cancion {
     position: fixed; z-index: 10;
-    top: 14px; right: 14px;
+    top: 14px;
     padding: 8px 13px;
     border: 3px solid;
     background: #6b4a24;
@@ -137,8 +137,11 @@
     box-shadow: 0 3px 0 rgba(0,0,0,.45);
     cursor: pointer;
   }
+  #volver { right: 14px; }
+  #cancion { left: 14px; background: #5b3a8a; border-color: #9a78d0 #2e1a4a #2e1a4a #9a78d0; }
   #volver svg { width: 72px; }
-  #volver:hover { filter: brightness(1.2); }
+  #cancion svg { width: 96px; }
+  #volver:hover, #cancion:hover { filter: brightness(1.2); }
 
   #pie { position: fixed; bottom: 9px; width: 100%; text-align: center; z-index: 10; opacity: .75; }
   #pie svg { width: 72%; max-width: 290px; margin: 0 auto; }
@@ -181,6 +184,7 @@
   </div>
 
   <div id="fx"></div>
+  <button id="cancion"></button>
   <button id="volver"></button>
   <div id="pie"></div>
 
@@ -609,6 +613,12 @@ $('pie').innerHTML = pixelText('CLICK PARA MAS LUCIERNAGAS', '#cfd6ff', '#1a1f3d
 $('volver').addEventListener('pointerdown', e => {
   e.stopPropagation();
   location.href = 'index.html';
+});
+
+$('cancion').innerHTML = pixelText('LA CANCION', '#ffffff', '#241340');
+$('cancion').addEventListener('pointerdown', e => {
+  e.stopPropagation();
+  location.href = 'cancion.html';
 });
 
 /* --- Reflejos de las luciernagas dentro del iris ---

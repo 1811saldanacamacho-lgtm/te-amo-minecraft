@@ -12,15 +12,29 @@ En la segunda cae la noche: unos ojos pixelados entre las luciérnagas y un letr
 
 ## Cómo verlas
 
-Son dos páginas:
+Son tres páginas:
 
 - **El cofre** — https://1811saldanacamacho-lgtm.github.io/te-amo-minecraft/
 - **La noche de luciérnagas** — https://1811saldanacamacho-lgtm.github.io/te-amo-minecraft/luz.html
+- **La canción** — https://1811saldanacamacho-lgtm.github.io/te-amo-minecraft/cancion.html
 
-La segunda se desbloquea sola desde la primera: aparece un botón cuando responde que sí.
+Van encadenadas: la segunda se desbloquea desde la primera cuando responde que sí, y de
+ahí se pasa a la tercera.
 
-También funcionan con doble click sobre `index.html` o `luz.html`. No necesitan internet,
-ni instalar nada, ni conexión a un servidor.
+También funcionan con doble click sobre cualquiera de los tres archivos. No necesitan
+internet, ni instalar nada, ni conexión a un servidor.
+
+## La canción
+
+Letra estilo karaoke: los renglones suben solos y cada uno se va encendiendo de izquierda
+a derecha, como si lo fueran cantando. Arriba y abajo quedan los renglones vecinos
+apagados y desenfocados, con una barra de avance al pie. De fondo, estrellas, un foco que
+late y notas musicales que suben; cada click suelta más.
+
+**Para poner otra letra** se cambia nada más el arreglo `LETRA` al inicio de
+`cancion.html`: cada renglón es `{ t: 'TEXTO', d: segundos }`. El tamaño de la letra, el
+centrado y los tiempos se acomodan solos a partir de eso. Un renglón con texto vacío sirve
+de respiro entre estrofas. Sólo mayúsculas y sin acentos, que es lo que dibuja la fuente.
 
 ## La noche de luciérnagas
 

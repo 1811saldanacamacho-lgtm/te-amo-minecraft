@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Una cancion para Fanisita</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }
+
+  body {
+    background: linear-gradient(#07040f 0%, #140a26 40%, #2a1140 72%, #43184a 100%);
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  svg { display: block; shape-rendering: crispEdges; }
+
+  /* ---------- Fondo ---------- */
+  #cielo { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+  .estrella { position: absolute; background: #fff; animation: titila ease-in-out infinite; }
+  @keyframes titila { 0%,100% { opacity: .2; } 50% { opacity: 1; } }
+
+  /* Un halo detras de la letra, como el foco de un escenario. */
+  #foco {
+    position: fixed; z-index: 1;
+    left: 50%; top: 46%;
+    width: 140vmax; height: 90vmax;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(ellipse at center, rgba(255,180,120,.16) 0%, rgba(120,60,160,.10) 38%, transparent 68%);
+    animation: latido 2.4s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes latido { 50% { opacity: .62; } }
+
+  #notas { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
+  .nota {
+    position: absolute;
+    animation: flota linear forwards;
+  }
+  @keyframes flota {
+    from { transform: translateY(0) rotate(0); opacity: 0; }
+    12%  { opacity: .85; }
+    to   { transform: translateY(-92vh) rotate(var(--giro)); opacity: 0; }
+  }
+
+  /* ---------- Karaoke ---------- */
+  #escenario {
+    position: relative; z-index: 5;
+    height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    padding-bottom: 40px;
+  }
+  #ventana {
+    position: relative;
+    width: 100%;
+    height: calc(var(--alto-linea) * 5);
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(transparent, #000 22%, #000 78%, transparent);
+            mask-image: linear-gradient(transparent, #000 22%, #000 78%, transparent);
+  }
+  #letra {
+    position: absolute;
+    left: 0; right: 0;
+    top: calc(var(--alto-linea) * 2);
+    transition: transform .62s cubic-bezier(.25,.9,.3,1);
+  }
+
+  .linea {
+    position: relative;
+    height: var(--alto-linea);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0;
+    transition: opacity .5s, filter .5s;
+    filter: blur(.6px);
+  }
+  .linea.activa { filter: none; }
+  /* El par envuelve las dos capas y toma el ancho del texto: es lo que hace
+     que la capa encendida caiga justo encima de la apagada. */
+  .linea .par { position: relative; height: var(--alto-texto); }
+  .linea .capa { height: 100%; }
+  .linea .capa svg { height: 100%; width: auto; }
+  /* La capa encendida se recorta de izquierda a derecha, como si la cantaran. */
+  .linea .encendida {
+    position: absolute; left: 0; top: 0;
+    clip-path: inset(0 100% 0 0);
+  }
+  .linea.activa .encendida { filter: drop-shadow(0 0 10px rgba(255,205,120,.55)); }
+  .linea.activa { animation: respira 2.4s ease-in-out infinite; }
+  @keyframes respira { 50% { transform: scale(1.045); } }
+
+  /* ---------- Barra de avance ---------- */
+  #barra {
+    position: fixed; z-index: 10;
+    left: 8%; right: 8%; bottom: 34px;
+    height: 10px;
+    background: rgba(255,255,255,.10);
+    border: 2px solid rgba(255,255,255,.22);
+  }
+  #relleno { height: 100%; width: 0; background: #ffcf7a; box-shadow: 0 0 10px rgba(255,207,122,.7); }
+
+  #pie { position: fixed; bottom: 9px; width: 100%; text-align: center; z-index: 10; opacity: .7; }
+  #pie svg { width: 68%; max-width: 280px; margin: 0 auto; }
+
+  #volver {
+    position: fixed; z-index: 10;
+    top: 14px; right: 14px;
+    padding: 8px 13px;
+    border: 3px solid;
+    background: #6b4a24;
+    border-color: #a87c44 #33210f #33210f #a87c44;
+    box-shadow: 0 3px 0 rgba(0,0,0,.45);
+    cursor: pointer;
+  }
+  #volver svg { width: 72px; }
+  #volver:hover { filter: brightness(1.2); }
+</style>
+</head>
+<body>
+  <div id="cielo"></div>
+  <div id="foco"></div>
+  <div id="notas"></div>
+
+  <div id="escenario">
+    <div id="ventana"><div id="letra"></div></div>
+  </div>
+
+  <div id="barra"><div id="relleno"></div></div>
+  <button id="volver"></button>
+  <div id="pie"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const rnd = (a, b) => a + Math.random() * (b - a);
+const pick = (arr, x, y) => {
+  const h = Math.abs(Math.sin(Math.floor(x) * 12.9898 + Math.floor(y) * 78.233) * 43758.5453);
+  return arr[Math.floor((h % 1) * arr.length)];
+};
+
+/* ==========================================================
+   LA LETRA
+   ----------------------------------------------------------
+   Cada renglon es { t: texto, d: cuantos segundos dura }.
+   Para poner otra letra, se cambia nada mas este arreglo: el
+   resto se acomoda solo (tamano, centrado y tiempos).
+   Solo mayusculas y sin acentos, que es lo que dibuja la fuente.
+   ========================================================== */
+const LETRA = [
+  { t: 'FANISITA',              d: 3.0 },
+  { t: 'DESDE QUE TE VI',       d: 3.2 },
+  { t: 'SE ME OLVIDA TODO',     d: 3.4 },
+  { t: 'MENOS TU NOMBRE',       d: 3.6 },
+  { t: '',                      d: 1.0 },
+  { t: 'TUS OJOS ME ALUMBRAN',  d: 3.8 },
+  { t: 'CUANDO TODO ESTA',      d: 3.0 },
+  { t: 'OSCURO',                d: 2.6 },
+  { t: 'NO SE COMO LE HACES',   d: 3.6 },
+  { t: 'PERO ME HACES BIEN',    d: 3.6 },
+  { t: '',                      d: 1.0 },
+  { t: 'SI ME PREGUNTAN',       d: 3.2 },
+  { t: 'QUE ES LA FELICIDAD',   d: 3.6 },
+  { t: 'DIGO TU NOMBRE',        d: 3.0 },
+  { t: 'Y YA',                  d: 2.4 },
+  { t: '',                      d: 1.2 },
+  { t: 'TE AMO FANISITA',       d: 5.0 }
+];
+
+/* ==========================================================
+   1. Tipografia pixelada 5x7
+   ========================================================== */
+const FONT = {
+  A:"01110,10001,10001,11111,10001,10001,10001", B:"11110,10001,10001,11110,10001,10001,11110",
+  C:"01111,10000,10000,10000,10000,10000,01111", D:"11110,10001,10001,10001,10001,10001,11110",
+  E:"11111,10000,10000,11110,10000,10000,11111", F:"11111,10000,10000,11110,10000,10000,10000",
+  G:"01110,10001,10000,10111,10001,10001,01110", H:"10001,10001,10001,11111,10001,10001,10001",
+  I:"11111,00100,00100,00100,00100,00100,11111", J:"00111,00010,00010,00010,00010,10010,01100",
+  K:"10001,10010,10100,11000,10100,10010,10001", L:"10000,10000,10000,10000,10000,10000,11111",
+  M:"10001,11011,10101,10101,10001,10001,10001", N:"10001,11001,10101,10101,10011,10001,10001",
+  O:"01110,10001,10001,10001,10001,10001,01110", P:"11110,10001,10001,11110,10000,10000,10000",
+  Q:"01110,10001,10001,10001,10101,10010,01101", R:"11110,10001,10001,11110,10100,10010,10001",
+  S:"01111,10000,10000,01110,00001,00001,11110", T:"11111,00100,00100,00100,00100,00100,00100",
+  U:"10001,10001,10001,10001,10001,10001,01110", V:"10001,10001,10001,10001,10001,01010,00100",
+  W:"10001,10001,10001,10101,10101,11011,10001", X:"10001,10001,01010,00100,01010,10001,10001",
+  Y:"10001,10001,01010,00100,00100,00100,00100", Z:"11111,00001,00010,00100,01000,10000,11111",
+  "!":"00100,00100,00100,00100,00100,00000,00100", "?":"01110,10001,00001,00110,00100,00000,00100",
+  "<":"00010,00100,01000,10000,01000,00100,00010",
+  ",":"00000,00000,00000,00000,00110,00100,01000",
+  ".":"00000,00000,00000,00000,00000,00000,00100", " ":"00000,00000,00000,00000,00000,00000,00000"
+};
+
+// El texto de Minecraft lleva una sombra dura desplazada un pixel.
+function pixelText(text, color, shadow = '#2a1608') {
+  const chars = [...text.toUpperCase()];
+  let main = '', shad = '';
+  chars.forEach((ch, i) => {
+    (FONT[ch] || FONT[' ']).split(',').forEach((row, y) => {
+      [...row].forEach((bit, x) => {
+        if (bit !== '1') return;
+        const px = i * 6 + x;
+        shad += `<rect x="${px + 1}" y="${y + 1}" width="1" height="1" fill="${shadow}"/>`;
+        main += `<rect x="${px}" y="${y}" width="1" height="1" fill="${color}"/>`;
+      });
+    });
+  });
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${Math.max(1, chars.length * 6)} 8" `
+       + `preserveAspectRatio="xMidYMid meet">${shad}${main}</svg>`;
+}
+
+/* ==========================================================
+   2. Armado de los renglones
+   ========================================================== */
+const APAGADO = '#6f6a9c', APAGADO_S = '#171334';
+const ENCENDIDO = '#ffe9a3', ENCENDIDO_S = '#5a3410';
+
+const cont = $('letra');
+const lineas = LETRA.map(({ t }) => {
+  const div = document.createElement('div');
+  div.className = 'linea';
+  if (t) {
+    div.innerHTML = `<div class="par">`
+                  +   `<div class="capa apagada">${pixelText(t, APAGADO, APAGADO_S)}</div>`
+                  +   `<div class="capa encendida">${pixelText(t, ENCENDIDO, ENCENDIDO_S)}</div>`
+                  + `</div>`;
+  }
+  cont.appendChild(div);
+  return div;
+});
+
+// El texto mas largo manda: de ahi sale el tamano de pixel que cabe en pantalla.
+const MAS_LARGO = Math.max(...LETRA.map(l => l.t.length), 1);
+function medir() {
+  // Ancho de un renglon = caracteres * 6 * (alto / 8). Se despeja el alto.
+  const cabe = (innerWidth * .88) / (MAS_LARGO * 0.75);
+  const alto = Math.max(14, Math.min(innerHeight * .085, 52, cabe));
+  document.documentElement.style.setProperty('--alto-texto', alto + 'px');
+  document.documentElement.style.setProperty('--alto-linea', Math.round(alto * 1.85) + 'px');
+  return Math.round(alto * 1.85);
+}
+let alturaLinea = medir();
+addEventListener('resize', () => { alturaLinea = medir(); colocar(actualIdx); });
+
+let actualIdx = -1;
+function colocar(i) {
+  cont.style.transform = `translateY(${-i * alturaLinea}px)`;
+  lineas.forEach((el, k) => {
+    const d = Math.abs(k - i);
+    el.style.opacity = d === 0 ? 1 : d === 1 ? .38 : d === 2 ? .15 : 0;
+    el.classList.toggle('activa', k === i);
+  });
+}
+
+/* ==========================================================
+   3. Reproduccion: el barrido que "canta" cada renglon
+   ========================================================== */
+const INICIOS = [];
+let total = 0;
+LETRA.forEach(l => { INICIOS.push(total); total += l.d; });
+
+let t0 = performance.now();
+
+function bucle(ahora) {
+  requestAnimationFrame(bucle);
+  let t = (ahora - t0) / 1000;
+  if (t >= total) { t0 = ahora; t = 0; }              // vuelve a empezar
+
+  let i = 0;
+  while (i < LETRA.length - 1 && t >= INICIOS[i + 1]) i++;
+  if (i !== actualIdx) { actualIdx = i; colocar(i); }
+
+  const p = Math.min(1, (t - INICIOS[i]) / LETRA[i].d);
+  lineas.forEach((el, k) => {
+    const luz = el.querySelector('.encendida');
+    if (!luz) return;
+    const q = k < i ? 1 : k > i ? 0 : p;
+    luz.style.clipPath = `inset(0 ${(1 - q) * 100}% 0 0)`;
+  });
+
+  $('relleno').style.width = (t / total * 100) + '%';
+}
+
+/* ==========================================================
+   4. Fondo: estrellas y notas musicales
+   ========================================================== */
+function spriteSVG(rows, palette) {
+  const h = rows.length, w = rows[0].length;
+  let out = '';
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      const p = palette[rows[y][x]];
+      if (!p) continue;
+      out += `<rect x="${x}" y="${y}" width="1" height="1" fill="${Array.isArray(p) ? pick(p, x, y) : p}"/>`;
+    }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" `
+       + `preserveAspectRatio="xMidYMid meet">${out}</svg>`;
+}
+
+const NOTA = [
+  "...###", "...###", "...#.#", "...#..",
+  "...#..", "##.#..", "####..", ".###.."
+];
+const COLORES_NOTA = [
+  ['#ffd98a', '#f7c164'], ['#ffb3c9', '#e88aa8'],
+  ['#b9a7ff', '#9585e0'], ['#9fe6d6', '#79c9b6']
+];
+
+const cielo = $('cielo');
+for (let i = 0; i < 130; i++) {
+  const s = document.createElement('div');
+  s.className = 'estrella';
+  const t = Math.random() < .84 ? 2 : 3;
+  s.style.width = t + 'px'; s.style.height = t + 'px';
+  s.style.left = rnd(0, 100) + '%';
+  s.style.top = rnd(0, 96) + '%';
+  s.style.animationDuration = rnd(1.7, 5.2) + 's';
+  s.style.animationDelay = -rnd(0, 5) + 's';
+  cielo.appendChild(s);
+}
+
+const notas = $('notas');
+function soltarNota(x) {
+  const n = document.createElement('div');
+  n.className = 'nota';
+  const par = COLORES_NOTA[Math.floor(Math.random() * COLORES_NOTA.length)];
+  n.innerHTML = spriteSVG(NOTA, { '#': par });
+  n.style.left = (x ?? rnd(2, 96)) + '%';
+  n.style.bottom = '-40px';
+  n.style.width = rnd(16, 30) + 'px';
+  n.style.setProperty('--giro', rnd(-40, 40) + 'deg');
+  const dur = rnd(7, 13);
+  n.style.animationDuration = dur + 's';
+  notas.appendChild(n);
+  setTimeout(() => n.remove(), dur * 1000 + 300);
+}
+for (let i = 0; i < 14; i++) setTimeout(() => soltarNota(), i * 620);
+setInterval(() => soltarNota(), 900);
+
+/* ==========================================================
+   5. Textos e interaccion
+   ========================================================== */
+$('volver').innerHTML = pixelText('< VOLVER', '#ffffff', '#2c1c0a');
+$('pie').innerHTML = pixelText('CLICK PARA MAS NOTAS', '#cfd6ff', '#1a1f3d');
+
+$('volver').addEventListener('pointerdown', e => {
+  e.stopPropagation();
+  location.href = 'luz.html';
+});
+
+document.addEventListener('pointerdown', e => {
+  const x = e.clientX / innerWidth * 100;
+  for (let i = 0; i < 5; i++) setTimeout(() => soltarNota(x + rnd(-8, 8)), i * 110);
+});
+
+colocar(0);
+requestAnimationFrame(bucle);
+</script>
+</body>
+</html>
