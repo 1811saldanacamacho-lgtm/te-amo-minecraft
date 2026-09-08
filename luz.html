@@ -95,6 +95,9 @@
   #cerrados { opacity: 0; }
   #retrato.parpadeo #abiertos { opacity: 0; }
   #retrato.parpadeo #cerrados { opacity: 1; }
+  /* Los reflejos van encima de todo y se apagan al parpadear. */
+  #reflejos { pointer-events: none; }
+  #retrato.parpadeo #reflejos { opacity: 0; }
 
   /* ---------- Letrero ---------- */
   #sign { display: flex; width: 100%; flex-direction: column; align-items: center; }
@@ -124,9 +127,9 @@
   }
 
   /* ---------- Enlace y pie ---------- */
-  #volver {
+  #volver, #estilo {
     position: fixed; z-index: 10;
-    top: 14px; right: 14px;
+    top: 14px;
     padding: 8px 13px;
     border: 3px solid;
     background: #6b4a24;
@@ -134,8 +137,11 @@
     box-shadow: 0 3px 0 rgba(0,0,0,.45);
     cursor: pointer;
   }
+  #volver { right: 14px; }
+  #estilo { left: 14px; background: #3d5aa8; border-color: #86a2e8 #1f2f5e #1f2f5e #86a2e8; }
   #volver svg { width: 72px; }
-  #volver:hover { filter: brightness(1.2); }
+  #estilo svg { width: 108px; }
+  #volver:hover, #estilo:hover { filter: brightness(1.2); }
 
   #pie { position: fixed; bottom: 9px; width: 100%; text-align: center; z-index: 10; opacity: .75; }
   #pie svg { width: 72%; max-width: 290px; margin: 0 auto; }
@@ -164,6 +170,7 @@
     <div id="retrato">
       <canvas id="abiertos" width="170" height="84"></canvas>
       <canvas id="cerrados" width="170" height="84"></canvas>
+      <canvas id="reflejos" width="170" height="84"></canvas>
     </div>
 
     <div id="sign">
@@ -177,6 +184,7 @@
   </div>
 
   <div id="fx"></div>
+  <button id="estilo"></button>
   <button id="volver"></button>
   <div id="pie"></div>
 
@@ -253,6 +261,30 @@ const IRIS        = ['#7a4e2c', '#6b4326', '#8a5a34', '#5d3a20'];
 const IRIS_BORDE  = '#3a2314';
 const PUPILA      = '#150c07';
 
+// --- Estilo nuevo: rampa elegida a mano ---
+// El pixel art se ve limpio cuando cada tono describe un volumen. Estos seis
+// van de la sombra al brillo y se usan a proposito, no al azar.
+const IRIS_RAMPA   = ['#2a190d', '#40270f', '#5c3a1a', '#7a4f27', '#986a38', '#b9884c'];
+const IRIS_ANILLO  = '#1c1108';     // anillo limbal, el borde oscuro del iris
+const PUPILA_HONDA = '#0c0704';
+const ESCLERA_BASE = '#e7d9d0';
+const ESCLERA_SOMB = '#c0a396';     // sombra que proyecta el parpado de arriba
+const ESCLERA_HOND = '#9d8175';
+const ESCLERA_CALI = '#dfb6a6';     // rincones, mas rosados
+const LINEA_AGUA   = '#e3cfc2';
+const REBOTE       = '#e8d9c8';
+
+const hash = n => { const s = Math.sin(n * 127.1) * 43758.5453; return s - Math.floor(s); };
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+
+// Altura del borde de la almendra en una columna: sirve para saber que tan
+// hondo queda cada pixel bajo el parpado.
+const bordeY = (dx, a, b, arriba) => {
+  const k = Math.max(0, 1 - Math.pow(Math.min(1, Math.abs(dx / a)), 1.5));
+  const d = b * Math.pow(k, 1 / 1.5);
+  return arriba ? -d : d;
+};
+
 const W = 170, H = 84;
 
 function nuevoLienzo() {
@@ -298,7 +330,117 @@ function ceja(L, cx, cy, ancho, alto) {
 const dentro = (x, y, cx, cy, a, b) =>
   Math.pow(Math.abs((x - cx) / a), 1.5) + Math.pow(Math.abs((y - cy) / b), 1.5);
 
-function ojo(L, cx, cy, a, b, cerrado) {
+// --- Version original: iris de ruido, un solo destello ---
+function ojoPlano(L, cx, cy, a, b) {
+  for (let y = cy - b - 5; y <= cy + b + 5; y++)
+    for (let x = cx - a - 4; x <= cx + a + 4; x++) {
+      const d = dentro(x, y, cx, cy, a, b);
+      if (d <= 1) set(L, x, y, pick(ESCLERA, x, y));
+      else if (d <= 1.30 && y <= cy + b * .35) set(L, x, y, pick(PESTANA, x, y));
+      else if (d <= 1.14) set(L, x, y, pick(PESTANA, x, y));
+      else if (d <= 1.5 && y > cy) set(L, x, y, pick(PIEL_MEDIA, x, y));
+    }
+
+  const ri = b * 1.04, icx = cx, icy = cy - b * .10;
+  for (let y = icy - ri - 1; y <= icy + ri + 1; y++)
+    for (let x = icx - ri - 1; x <= icx + ri + 1; x++) {
+      if (dentro(x, y, cx, cy, a, b) > 1) continue;
+      const r = Math.hypot(x - icx, y - icy);
+      if (r <= ri * .42) set(L, x, y, PUPILA);
+      else if (r <= ri * .88) set(L, x, y, pick(IRIS, x, y));
+      else if (r <= ri) set(L, x, y, IRIS_BORDE);
+    }
+  set(L, icx - ri * .40, icy - ri * .42, '#ffffff');
+  set(L, icx - ri * .40 + 1, icy - ri * .42, '#f2e9e4');
+  set(L, icx - ri * .40, icy - ri * .42 + 1, '#f2e9e4');
+}
+
+// --- Version nueva: fibras del iris, sombra del parpado, linea de agua ---
+function ojoDetallado(L, cx, cy, a, b) {
+  const ri = b * 1.05, icx = cx, icy = cy - b * .10;
+
+  for (let y = cy - b - 5; y <= cy + b + 5; y++)
+    for (let x = cx - a - 4; x <= cx + a + 4; x++) {
+      const d = dentro(x, y, cx, cy, a, b);
+      if (d > 1) {                                   // fuera del ojo: delineado
+        if (d <= 1.30 && y <= cy + b * .35) set(L, x, y, pick(PESTANA, x, y));
+        else if (d <= 1.14) set(L, x, y, pick(PESTANA, x, y));
+        else if (d <= 1.5 && y > cy) set(L, x, y, pick(PIEL_MEDIA, x, y));
+        continue;
+      }
+
+      // Que tan abajo del parpado superior cae este pixel.
+      const prof = y - (cy + bordeY(x - cx, a, b, true));
+      const r = Math.hypot(x - icx, y - icy);
+
+      if (r <= ri) {
+        if (r <= ri * .40) { set(L, x, y, PUPILA_HONDA); continue; }
+        if (r >= ri * .88) { set(L, x, y, IRIS_ANILLO); continue; }
+
+        // Fibras radiales: el sector angular decide si la fibra es clara u
+        // oscura. Pocas fibras y solo en la mitad de afuera: mas cerca de la
+        // pupila los sectores miden menos de un pixel y solo dan ruido.
+        const t = (r - ri * .40) / (ri * .48);       // 0 junto a la pupila, 1 al anillo
+        const ang = Math.atan2(y - icy, x - icx);
+        const sector = Math.floor((ang / (Math.PI * 2) + .5) * 12);
+        let nivel = t < .12 ? 1 : t < .30 ? 2 : t < .62 ? 3 : t < .86 ? 2 : 1;
+        if (t > .28) nivel += hash(sector) > .5 ? 1 : -1;
+        if (prof < 4) nivel -= 2;                    // sombra del parpado
+        else if (prof < 6) nivel -= 1;
+        set(L, x, y, IRIS_RAMPA[clamp(Math.round(nivel), 0, 5)]);
+        continue;
+      }
+
+      // Esclerotica: nunca plana. Sombra arriba y rincones mas calidos.
+      let c = prof < 2.2 ? ESCLERA_HOND : prof < 4.2 ? ESCLERA_SOMB : ESCLERA_BASE;
+      if (Math.abs(x - cx) > a * .74) c = ESCLERA_CALI;
+      set(L, x, y, c);
+    }
+
+  // Linea de agua: el filo humedo del parpado de abajo.
+  for (let x = cx - a * .58; x <= cx + a * .58; x++)
+    set(L, x, cy + bordeY(x - cx, a, b, false) - 1, LINEA_AGUA);
+
+  // Destello principal y rebote opuesto: juntos leen como ojo humedo.
+  const hx = icx - ri * .42, hy = icy - ri * .46;
+  set(L, hx, hy, '#ffffff'); set(L, hx + 1, hy, '#ffffff');
+  set(L, hx, hy + 1, '#ffffff'); set(L, hx + 1, hy + 1, '#f2e9e4');
+  set(L, icx + ri * .40, icy + ri * .42, REBOTE);
+  set(L, icx + ri * .40 + 1, icy + ri * .42, REBOTE);
+}
+
+// Pestanas: parejas en el estilo viejo, con largos y curvas variadas en el nuevo.
+function pestanas(L, cx, cy, a, b, cerrado, detallado) {
+  if (!detallado) {
+    for (let t = -.92; t <= .92; t += .085) {
+      const bx = cx + t * a * .99;
+      const by = cy + bordeY(t * a, a, b, true);
+      const largo = 4 + 3 * (1 - Math.abs(t));
+      for (let s = 0; s < largo; s++)
+        set(L, bx + t * s * .85, by - s * .92 + (cerrado ? b * .5 : 0), pick(PESTANA, bx | 0, s));
+    }
+    return;
+  }
+  const N = 13;
+  for (let k = 0; k < N; k++) {
+    const t = -.92 + 1.84 * k / (N - 1);
+    const h = hash(k * 3.7 + cx);
+    const bx = cx + t * a * .99;
+    const by = cy + bordeY(t * a, a, b, true) + (cerrado ? b * .5 : 0);
+    // Cortas a proposito: si crecen mas, se funden con la ceja.
+    const largo = (2.6 + 3.2 * (1 - Math.abs(t))) * (.78 + h * .55);
+    const curva = (.35 + h * .7) * (t >= 0 ? 1 : -1);
+    for (let s = 0; s < largo; s++) {
+      const p = s / largo;
+      const px = bx + t * s * .9 + curva * p * p * 2.2;
+      const py = by - s * .95;
+      set(L, px, py, pick(PESTANA, px | 0, py | 0));
+      if (p < .4) set(L, px + (t >= 0 ? 1 : -1), py, pick(PESTANA, px | 0, py | 0));
+    }
+  }
+}
+
+function ojo(L, cx, cy, a, b, cerrado, detallado) {
   if (cerrado) {
     // Parpado bajado: solo la linea de la pestana y su sombra.
     for (let x = cx - a; x <= cx + a; x++) {
@@ -307,44 +449,12 @@ function ojo(L, cx, cy, a, b, cerrado) {
       for (let g = 0; g < 3; g++) set(L, x, y + g, pick(PESTANA, x | 0, g));
       set(L, x, y - 1, pick(PIEL_HONDA, x | 0, 1));
     }
+  } else if (detallado) {
+    ojoDetallado(L, cx, cy, a, b);
   } else {
-    for (let y = cy - b - 5; y <= cy + b + 5; y++)
-      for (let x = cx - a - 4; x <= cx + a + 4; x++) {
-        const d = dentro(x, y, cx, cy, a, b);
-        if (d <= 1) {
-          set(L, x, y, pick(ESCLERA, x, y));
-        } else if (d <= 1.30 && y <= cy + b * .35) {
-          set(L, x, y, pick(PESTANA, x, y));            // linea superior gruesa
-        } else if (d <= 1.14) {
-          set(L, x, y, pick(PESTANA, x, y));            // linea inferior fina
-        } else if (d <= 1.5 && y > cy) {
-          set(L, x, y, pick(PIEL_MEDIA, x, y));         // brillo del parpado bajo
-        }
-      }
-
-    // Iris, anillo, pupila y destello
-    const ri = b * 1.04, icx = cx, icy = cy - b * .10;
-    for (let y = icy - ri - 1; y <= icy + ri + 1; y++)
-      for (let x = icx - ri - 1; x <= icx + ri + 1; x++) {
-        if (dentro(x, y, cx, cy, a, b) > 1) continue;   // recortado por el parpado
-        const r = Math.hypot(x - icx, y - icy);
-        if (r <= ri * .42) set(L, x, y, PUPILA);
-        else if (r <= ri * .88) set(L, x, y, pick(IRIS, x, y));
-        else if (r <= ri) set(L, x, y, IRIS_BORDE);
-      }
-    set(L, icx - ri * .40, icy - ri * .42, '#ffffff');
-    set(L, icx - ri * .40 + 1, icy - ri * .42, '#f2e9e4');
-    set(L, icx - ri * .40, icy - ri * .42 + 1, '#f2e9e4');
+    ojoPlano(L, cx, cy, a, b);
   }
-
-  // Pestanas largas: puas hacia afuera siguiendo el borde de arriba.
-  for (let t = -.92; t <= .92; t += .085) {
-    const bx = cx + t * a * .99;
-    const by = cy - Math.pow(1 - Math.pow(Math.abs(t), 1.5), 1 / 1.5) * b;
-    const largo = 4 + 3 * (1 - Math.abs(t));
-    for (let s = 0; s < largo; s++)
-      set(L, bx + t * s * .85, by - s * .92 + (cerrado ? b * .5 : 0), pick(PESTANA, bx | 0, s));
-  }
+  pestanas(L, cx, cy, a, b, cerrado, detallado);
 }
 
 function pintar(L, ctx) {
@@ -358,21 +468,32 @@ function pintar(L, ctx) {
     }
 }
 
-function retrato(cerrado) {
+// Los centros van separados casi un ancho de ojo, como en un rostro de verdad.
+// Guardo la geometria del iris porque los reflejos la necesitan.
+const OJOS = [
+  { cx: 46,  cy: 52, a: 19, b: 10.5 },
+  { cx: 122, cy: 48, a: 22, b: 12   }        // el protagonista, un poco mas grande
+];
+OJOS.forEach(o => { o.ri = o.b * 1.05; o.icx = o.cx; o.icy = o.cy - o.b * .10; });
+
+function retrato(cerrado, detallado) {
   const L = nuevoLienzo();
   // Primero la piel, para que las pestanas y el iris queden encima.
-  // Los centros van separados casi un ancho de ojo, como en un rostro de verdad.
   parche(L, 46, 52, 30, 27);
   parche(L, 122, 48, 34, 30);
   ceja(L, 46, 34, 23, 7);
   ceja(L, 122, 28, 28, 8);
-  ojo(L, 46, 52, 19, 10.5, cerrado);
-  ojo(L, 122, 48, 22, 12, cerrado);           // el ojo protagonista, un poco mas grande
+  OJOS.forEach(o => ojo(L, o.cx, o.cy, o.a, o.b, cerrado, detallado));
   return L;
 }
 
-pintar(retrato(false), $('abiertos').getContext('2d'));
-pintar(retrato(true),  $('cerrados').getContext('2d'));
+let detallado = true;
+function redibujar() {
+  pintar(retrato(false, detallado), $('abiertos').getContext('2d'));
+  pintar(retrato(true,  detallado), $('cerrados').getContext('2d'));
+  $('estilo').innerHTML = pixelText(detallado ? 'ESTILO NUEVO' : 'ESTILO ANTES', '#ffffff', '#2c1c0a');
+  $('reflejos').style.display = detallado ? 'block' : 'none';
+}
 
 // Parpadeo cada tanto
 setInterval(() => {
@@ -477,6 +598,54 @@ $('volver').addEventListener('pointerdown', e => {
   e.stopPropagation();
   location.href = 'index.html';
 });
+
+/* --- Reflejos de las luciernagas dentro del iris ---
+   Las posiciones salen de las luciernagas de verdad: se lee donde esta cada
+   una en la pantalla y se comprime la escena dentro del disco del iris,
+   invertida, como en cualquier reflejo. El titileo lleva su propio ritmo. */
+const REFLEJADAS = [...luces.children].slice(0, 10);
+const ctxRef = $('reflejos').getContext('2d');
+let ultimoRef = 0;
+
+function pintarReflejos(ahora) {
+  requestAnimationFrame(pintarReflejos);
+  if (!detallado || ahora - ultimoRef < 55) return;      // ~18 cuadros por segundo
+  ultimoRef = ahora;
+  ctxRef.clearRect(0, 0, W, H);
+  const t = ahora / 1000;
+
+  REFLEJADAS.forEach((el, i) => {
+    const brillo = .5 + .5 * Math.sin(t * (.9 + hash(i)) + hash(i + 9) * 6.28);
+    if (brillo < .45) return;
+    const r = el.getBoundingClientRect();
+    const u = (r.left + r.width / 2) / innerWidth - .5;
+    const v = (r.top + r.height / 2) / innerHeight - .5;
+
+    OJOS.forEach(o => {
+      const x = Math.round(o.icx - u * o.ri * 1.5);      // el reflejo va en espejo
+      const y = Math.round(o.icy + v * o.ri * 1.5);
+      if (Math.hypot(x - o.icx, y - o.icy) > o.ri * .80) return;
+      // Calido, casi blanco: tiene que leerse como luz, no como mancha verde.
+      ctxRef.fillStyle = '#fff7c4';
+      ctxRef.globalAlpha = .35 + brillo * .5;
+      ctxRef.fillRect(x, y, 1, 1);
+      ctxRef.globalAlpha *= .22;                          // halo de un pixel
+      ctxRef.fillRect(x - 1, y, 1, 1); ctxRef.fillRect(x + 1, y, 1, 1);
+      ctxRef.fillRect(x, y - 1, 1, 1); ctxRef.fillRect(x, y + 1, 1, 1);
+    });
+  });
+  ctxRef.globalAlpha = 1;
+}
+
+$('estilo').addEventListener('pointerdown', e => {
+  e.stopPropagation();
+  detallado = !detallado;
+  redibujar();
+  ctxRef.clearRect(0, 0, W, H);
+});
+
+redibujar();
+requestAnimationFrame(pintarReflejos);
 
 const fx = $('fx');
 document.addEventListener('pointerdown', e => {

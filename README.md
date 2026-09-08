@@ -24,11 +24,24 @@ ni instalar nada, ni conexión a un servidor.
 
 ## La noche de luciérnagas
 
-Retrato pixelado de unos ojos asomándose entre los dedos, dibujado por código: la almendra
-del ojo, el iris, las pestañas y la ceja se generan con curvas, no con un mapa de bits.
-Los ojos parpadean cada cierto tiempo. Alrededor, cielo estrellado, luna cuadrada,
-árboles en penumbra y luciérnagas que vuelan y titilan. Cada click suelta chispas y deja
-luciérnagas nuevas. El letrero dice **ERES LA LUZ DE MI VIDA**.
+Unos ojos pixelados flotando en la noche, dibujados por código: la almendra del ojo, el
+iris, las pestañas y la ceja se generan con curvas, no con un mapa de bits. La piel
+alrededor se deshace en píxeles sueltos con difuminado ordenado, así que se funden con la
+oscuridad en vez de quedar recortados. Parpadean cada cierto tiempo.
+
+El iris usa una rampa de seis tonos elegidos a mano, con fibras radiales que salen de la
+pupila, anillo limbal oscuro, la sombra que proyecta el párpado sobre el globo, línea de
+agua en el párpado inferior y dos brillos (el principal y el de luz rebotada).
+
+**Las luciérnagas se reflejan dentro del iris.** Las posiciones salen de las luciérnagas
+de verdad: se lee dónde está cada una en la pantalla y se comprime la escena dentro del
+disco del iris, invertida, como en cualquier reflejo.
+
+Alrededor, cielo estrellado, luna cuadrada, árboles en penumbra y luciérnagas que vuelan y
+titilan. Cada click suelta chispas y deja luciérnagas nuevas. El letrero dice
+**ERES LA LUZ DE MI VIDA**.
+
+El botón de arriba a la izquierda alterna entre el estilo nuevo y el original, para comparar.
 
 ## Qué incluye el cofre
 
