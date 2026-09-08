@@ -127,9 +127,9 @@
   }
 
   /* ---------- Enlace y pie ---------- */
-  #volver, #estilo {
+  #volver {
     position: fixed; z-index: 10;
-    top: 14px;
+    top: 14px; right: 14px;
     padding: 8px 13px;
     border: 3px solid;
     background: #6b4a24;
@@ -137,11 +137,8 @@
     box-shadow: 0 3px 0 rgba(0,0,0,.45);
     cursor: pointer;
   }
-  #volver { right: 14px; }
-  #estilo { left: 14px; background: #3d5aa8; border-color: #86a2e8 #1f2f5e #1f2f5e #86a2e8; }
   #volver svg { width: 72px; }
-  #estilo svg { width: 108px; }
-  #volver:hover, #estilo:hover { filter: brightness(1.2); }
+  #volver:hover { filter: brightness(1.2); }
 
   #pie { position: fixed; bottom: 9px; width: 100%; text-align: center; z-index: 10; opacity: .75; }
   #pie svg { width: 72%; max-width: 290px; margin: 0 auto; }
@@ -184,7 +181,6 @@
   </div>
 
   <div id="fx"></div>
-  <button id="estilo"></button>
   <button id="volver"></button>
   <div id="pie"></div>
 
@@ -256,14 +252,8 @@ const PIEL_SOMBRA = ['#8a6150', '#7e5747', '#946a58', '#734f40'];
 const PIEL_HONDA  = ['#57392e', '#4d3228', '#603f33'];
 const CEJA        = ['#2e1c14', '#241510', '#38241a'];
 const PESTANA     = ['#1c110c', '#140b08', '#26160f'];
-const ESCLERA     = ['#e7d9d0', '#ddcdc3', '#f0e5dd'];
-const IRIS        = ['#7a4e2c', '#6b4326', '#8a5a34', '#5d3a20'];
-const IRIS_BORDE  = '#3a2314';
-const PUPILA      = '#150c07';
-
-// --- Estilo nuevo: rampa elegida a mano ---
-// El pixel art se ve limpio cuando cada tono describe un volumen. Estos seis
-// van de la sombra al brillo y se usan a proposito, no al azar.
+// Rampa elegida a mano: el pixel art se ve limpio cuando cada tono describe un
+// volumen. Estos seis van de la sombra al brillo y se usan a proposito.
 const IRIS_RAMPA   = ['#2a190d', '#40270f', '#5c3a1a', '#7a4f27', '#986a38', '#b9884c'];
 const IRIS_ANILLO  = '#1c1108';     // anillo limbal, el borde oscuro del iris
 const PUPILA_HONDA = '#0c0704';
@@ -273,6 +263,10 @@ const ESCLERA_HOND = '#9d8175';
 const ESCLERA_CALI = '#dfb6a6';     // rincones, mas rosados
 const LINEA_AGUA   = '#e3cfc2';
 const REBOTE       = '#e8d9c8';
+const SOMBRA_OJOS  = ['#8f5a52', '#7f4d46', '#9c675e', '#734339'];   // sombra rosada
+const LAGRIMAL     = '#f7e4d8';                                      // brillo del lagrimal
+
+const TILT = .13;   // esquina de afuera levantada: mirada de gata
 
 const hash = n => { const s = Math.sin(n * 127.1) * 43758.5453; return s - Math.floor(s); };
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -316,12 +310,13 @@ function parche(L, cx, cy, rx, ry) {
     }
 }
 
-// Ceja: un arco grueso que se afila hacia la cola.
-function ceja(L, cx, cy, ancho, alto) {
-  for (let t = -1; t <= 1; t += .004) {
-    const x = cx + t * ancho;
-    const y = cy - Math.cos(t * 1.35) * alto + t * t * alto * .8;
-    const grosor = 5.2 * (1 - Math.abs(t) * .55);
+// Ceja arqueada: gruesa en la cabeza, con el pico en el tercio de afuera y
+// afilandose hasta la cola. `lado` dice hacia donde queda el exterior.
+function ceja(L, cx, cy, ancho, alto, lado) {
+  for (let u = -1; u <= 1; u += .004) {          // -1 cabeza, +1 cola
+    const x = cx + u * lado * ancho;
+    const y = cy - Math.cos((u - .25) * 1.25) * alto + u * u * alto * .55;
+    const grosor = Math.max(1.1, 2.1 * (1 - u * .85));
     for (let g = -grosor; g <= grosor; g += .5) set(L, x, y + g, pick(CEJA, x | 0, (y + g) | 0));
   }
 }
@@ -330,47 +325,46 @@ function ceja(L, cx, cy, ancho, alto) {
 const dentro = (x, y, cx, cy, a, b) =>
   Math.pow(Math.abs((x - cx) / a), 1.5) + Math.pow(Math.abs((y - cy) / b), 1.5);
 
-// --- Version original: iris de ruido, un solo destello ---
-function ojoPlano(L, cx, cy, a, b) {
-  for (let y = cy - b - 5; y <= cy + b + 5; y++)
-    for (let x = cx - a - 4; x <= cx + a + 4; x++) {
-      const d = dentro(x, y, cx, cy, a, b);
-      if (d <= 1) set(L, x, y, pick(ESCLERA, x, y));
-      else if (d <= 1.30 && y <= cy + b * .35) set(L, x, y, pick(PESTANA, x, y));
-      else if (d <= 1.14) set(L, x, y, pick(PESTANA, x, y));
-      else if (d <= 1.5 && y > cy) set(L, x, y, pick(PIEL_MEDIA, x, y));
-    }
+// La inclinacion levanta la esquina de afuera. Todo lo que toca el parpado
+// trabaja en ese espacio inclinado; el iris no, porque es una esfera.
+const inclina = (x, o) => (x - o.cx) * TILT * o.lado;
 
-  const ri = b * 1.04, icx = cx, icy = cy - b * .10;
-  for (let y = icy - ri - 1; y <= icy + ri + 1; y++)
-    for (let x = icx - ri - 1; x <= icx + ri + 1; x++) {
-      if (dentro(x, y, cx, cy, a, b) > 1) continue;
-      const r = Math.hypot(x - icx, y - icy);
-      if (r <= ri * .42) set(L, x, y, PUPILA);
-      else if (r <= ri * .88) set(L, x, y, pick(IRIS, x, y));
-      else if (r <= ri) set(L, x, y, IRIS_BORDE);
+// Sombra de ojos: se abre hacia la esquina de afuera y se disuelve hacia arriba.
+// Va antes que la ceja, para que la ceja la tape donde haga falta.
+function sombraOjos(L, o) {
+  const { cx, cy, a, b, lado } = o;
+  for (let x = Math.floor(cx - a * 1.1); x <= cx + a * 1.1; x++) {
+    const dx = (x - cx) / a;
+    // Pegada al parpado: si sube mas, se come la cuenca y ensucia la ceja.
+    const alto = b * (.30 + .40 * Math.max(0, dx * lado));
+    const yTop = cy + bordeY(x - cx, a, b, true) - inclina(x, o);
+    for (let s = 1; s <= alto; s++) {
+      const y = Math.round(yTop - s);
+      const umbral = (BAYER[((y % 4) + 4) % 4][((x % 4) + 4) % 4] + .5) / 16;
+      if (s / alto > umbral * .85) continue;
+      set(L, x, y, pick(SOMBRA_OJOS, x, y));
     }
-  set(L, icx - ri * .40, icy - ri * .42, '#ffffff');
-  set(L, icx - ri * .40 + 1, icy - ri * .42, '#f2e9e4');
-  set(L, icx - ri * .40, icy - ri * .42 + 1, '#f2e9e4');
+  }
 }
 
-// --- Version nueva: fibras del iris, sombra del parpado, linea de agua ---
-function ojoDetallado(L, cx, cy, a, b) {
-  const ri = b * 1.05, icx = cx, icy = cy - b * .10;
+function ojoAbierto(L, o) {
+  const { cx, cy, a, b, lado, ri, icx, icy } = o;
 
-  for (let y = cy - b - 5; y <= cy + b + 5; y++)
-    for (let x = cx - a - 4; x <= cx + a + 4; x++) {
-      const d = dentro(x, y, cx, cy, a, b);
+  for (let y = cy - b - 8; y <= cy + b + 8; y++)
+    for (let x = cx - a - 8; x <= cx + a + 8; x++) {
+      const yp = y + inclina(x, o);                  // coordenada del parpado
+      const d = dentro(x, yp, cx, cy, a, b);
+
       if (d > 1) {                                   // fuera del ojo: delineado
-        if (d <= 1.30 && y <= cy + b * .35) set(L, x, y, pick(PESTANA, x, y));
+        // El delineado engorda hacia la esquina de afuera.
+        const haciaFuera = clamp((x - cx) * lado / a, 0, 1);
+        if (d <= 1.30 + haciaFuera * .38 && yp <= cy + b * .35) set(L, x, y, pick(PESTANA, x, y));
         else if (d <= 1.14) set(L, x, y, pick(PESTANA, x, y));
-        else if (d <= 1.5 && y > cy) set(L, x, y, pick(PIEL_MEDIA, x, y));
+        else if (d <= 1.5 && yp > cy) set(L, x, y, pick(PIEL_MEDIA, x, y));
         continue;
       }
 
-      // Que tan abajo del parpado superior cae este pixel.
-      const prof = y - (cy + bordeY(x - cx, a, b, true));
+      const prof = yp - (cy + bordeY(x - cx, a, b, true));   // hondura bajo el parpado
       const r = Math.hypot(x - icx, y - icy);
 
       if (r <= ri) {
@@ -399,7 +393,23 @@ function ojoDetallado(L, cx, cy, a, b) {
 
   // Linea de agua: el filo humedo del parpado de abajo.
   for (let x = cx - a * .58; x <= cx + a * .58; x++)
-    set(L, x, cy + bordeY(x - cx, a, b, false) - 1, LINEA_AGUA);
+    set(L, x, cy + bordeY(x - cx, a, b, false) - inclina(x, o) - 1, LINEA_AGUA);
+
+  // Rabillo: el trazo que se estira y sube en la esquina de afuera.
+  const exX = cx + lado * a, exY = cy - a * TILT;
+  const largoAla = a * .23;
+  for (let s = -1; s < largoAla; s++) {
+    const p = Math.max(0, s) / largoAla;
+    const px = exX + lado * s * .92;
+    const py = exY - s * .62 - p * p * a * .10;
+    const gr = 1.7 * (1 - p * .95);
+    for (let g = -gr; g <= gr; g += .5) set(L, px, py + g, pick(PESTANA, px | 0, (py + g) | 0));
+  }
+
+  // Lagrimal: el puntito claro de la esquina de adentro.
+  const inX = cx - lado * a * .86, inY = cy + a * TILT * .86;
+  set(L, inX, inY, LAGRIMAL);
+  set(L, inX + lado, inY + 1, ESCLERA_CALI);
 
   // Destello principal y rebote opuesto: juntos leen como ojo humedo.
   const hx = icx - ri * .42, hy = icy - ri * .46;
@@ -409,52 +419,55 @@ function ojoDetallado(L, cx, cy, a, b) {
   set(L, icx + ri * .40 + 1, icy + ri * .42, REBOTE);
 }
 
-// Pestanas: parejas en el estilo viejo, con largos y curvas variadas en el nuevo.
-function pestanas(L, cx, cy, a, b, cerrado, detallado) {
-  if (!detallado) {
-    for (let t = -.92; t <= .92; t += .085) {
-      const bx = cx + t * a * .99;
-      const by = cy + bordeY(t * a, a, b, true);
-      const largo = 4 + 3 * (1 - Math.abs(t));
-      for (let s = 0; s < largo; s++)
-        set(L, bx + t * s * .85, by - s * .92 + (cerrado ? b * .5 : 0), pick(PESTANA, bx | 0, s));
-    }
-    return;
-  }
-  const N = 13;
+// Pestanas: mas juntas y mas largas hacia la esquina de afuera, todas curvando
+// hacia ese lado. Es lo que hace la mirada.
+function pestanas(L, o, cerrado) {
+  const { cx, cy, a, b, lado } = o;
+  const N = 16;
   for (let k = 0; k < N; k++) {
-    const t = -.92 + 1.84 * k / (N - 1);
+    // La potencia agrupa las pestanas hacia el exterior.
+    const tt = -.95 + 1.9 * Math.pow(k / (N - 1), .75);
+    const t = tt * lado;
     const h = hash(k * 3.7 + cx);
     const bx = cx + t * a * .99;
-    const by = cy + bordeY(t * a, a, b, true) + (cerrado ? b * .5 : 0);
-    // Cortas a proposito: si crecen mas, se funden con la ceja.
-    const largo = (2.6 + 3.2 * (1 - Math.abs(t))) * (.78 + h * .55);
-    const curva = (.35 + h * .7) * (t >= 0 ? 1 : -1);
+    const by = cy + bordeY(t * a, a, b, true) - inclina(bx, o) + (cerrado ? b * .5 : 0);
+    const largo = Math.min(7, (2.8 + 3.4 * (.5 + .5 * tt)) * (.82 + h * .45));
     for (let s = 0; s < largo; s++) {
       const p = s / largo;
-      const px = bx + t * s * .9 + curva * p * p * 2.2;
+      const px = bx + t * s * .55 + lado * p * p * largo * .42;
       const py = by - s * .95;
       set(L, px, py, pick(PESTANA, px | 0, py | 0));
-      if (p < .4) set(L, px + (t >= 0 ? 1 : -1), py, pick(PESTANA, px | 0, py | 0));
+      if (p < .45) set(L, px + lado, py, pick(PESTANA, px | 0, py | 0));
     }
+  }
+
+  if (cerrado) return;
+  // Pestanas de abajo: cortas, solo en la mitad de afuera.
+  for (let k = 0; k < 6; k++) {
+    const tt = .12 + .76 * k / 5;
+    const t = tt * lado;
+    const bx = cx + t * a * .95;
+    const by = cy + bordeY(t * a, a, b, false) - inclina(bx, o);
+    const largo = 1.8 + 1.8 * (1 - Math.abs(tt - .45) * 1.5);
+    for (let s = 0; s < largo; s++)
+      set(L, bx + lado * s * .45, by + s * .9, pick(PESTANA, bx | 0, s));
   }
 }
 
-function ojo(L, cx, cy, a, b, cerrado, detallado) {
+function ojo(L, o, cerrado) {
   if (cerrado) {
     // Parpado bajado: solo la linea de la pestana y su sombra.
+    const { cx, cy, a, b } = o;
     for (let x = cx - a; x <= cx + a; x++) {
       const t = (x - cx) / a;
-      const y = cy + Math.cos(t * 1.5) * b * .34;
+      const y = cy + Math.cos(t * 1.5) * b * .34 - inclina(x, o);
       for (let g = 0; g < 3; g++) set(L, x, y + g, pick(PESTANA, x | 0, g));
       set(L, x, y - 1, pick(PIEL_HONDA, x | 0, 1));
     }
-  } else if (detallado) {
-    ojoDetallado(L, cx, cy, a, b);
   } else {
-    ojoPlano(L, cx, cy, a, b);
+    ojoAbierto(L, o);
   }
-  pestanas(L, cx, cy, a, b, cerrado, detallado);
+  pestanas(L, o, cerrado);
 }
 
 function pintar(L, ctx) {
@@ -470,29 +483,28 @@ function pintar(L, ctx) {
 
 // Los centros van separados casi un ancho de ojo, como en un rostro de verdad.
 // Guardo la geometria del iris porque los reflejos la necesitan.
+// `lado` apunta hacia la esquina de afuera de cada ojo.
 const OJOS = [
-  { cx: 46,  cy: 52, a: 19, b: 10.5 },
-  { cx: 122, cy: 48, a: 22, b: 12   }        // el protagonista, un poco mas grande
+  { cx: 46,  cy: 52, a: 19, b: 10.5, lado: -1 },
+  { cx: 122, cy: 48, a: 22, b: 12,   lado:  1 }   // el protagonista, un poco mas grande
 ];
-OJOS.forEach(o => { o.ri = o.b * 1.05; o.icx = o.cx; o.icy = o.cy - o.b * .10; });
+OJOS.forEach(o => { o.ri = o.b * 1.12; o.icx = o.cx; o.icy = o.cy - o.b * .10; });
 
-function retrato(cerrado, detallado) {
+function retrato(cerrado) {
   const L = nuevoLienzo();
-  // Primero la piel, para que las pestanas y el iris queden encima.
+  // Primero la piel, luego la sombra, luego la ceja: cada capa tapa a la anterior.
   parche(L, 46, 52, 30, 27);
   parche(L, 122, 48, 34, 30);
-  ceja(L, 46, 34, 23, 7);
-  ceja(L, 122, 28, 28, 8);
-  OJOS.forEach(o => ojo(L, o.cx, o.cy, o.a, o.b, cerrado, detallado));
+  OJOS.forEach(o => sombraOjos(L, o));
+  ceja(L, 46, 33, 23, 7.5, -1);
+  ceja(L, 122, 27, 28, 8.5, 1);
+  OJOS.forEach(o => ojo(L, o, cerrado));
   return L;
 }
 
-let detallado = true;
-function redibujar() {
-  pintar(retrato(false, detallado), $('abiertos').getContext('2d'));
-  pintar(retrato(true,  detallado), $('cerrados').getContext('2d'));
-  $('estilo').innerHTML = pixelText(detallado ? 'ESTILO NUEVO' : 'ESTILO ANTES', '#ffffff', '#2c1c0a');
-  $('reflejos').style.display = detallado ? 'block' : 'none';
+function dibujarOjos() {
+  pintar(retrato(false), $('abiertos').getContext('2d'));
+  pintar(retrato(true),  $('cerrados').getContext('2d'));
 }
 
 // Parpadeo cada tanto
@@ -609,7 +621,7 @@ let ultimoRef = 0;
 
 function pintarReflejos(ahora) {
   requestAnimationFrame(pintarReflejos);
-  if (!detallado || ahora - ultimoRef < 55) return;      // ~18 cuadros por segundo
+  if (ahora - ultimoRef < 55) return;                    // ~18 cuadros por segundo
   ultimoRef = ahora;
   ctxRef.clearRect(0, 0, W, H);
   const t = ahora / 1000;
@@ -637,14 +649,7 @@ function pintarReflejos(ahora) {
   ctxRef.globalAlpha = 1;
 }
 
-$('estilo').addEventListener('pointerdown', e => {
-  e.stopPropagation();
-  detallado = !detallado;
-  redibujar();
-  ctxRef.clearRect(0, 0, W, H);
-});
-
-redibujar();
+dibujarOjos();
 requestAnimationFrame(pintarReflejos);
 
 const fx = $('fx');

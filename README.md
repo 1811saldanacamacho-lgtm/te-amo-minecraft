@@ -33,6 +33,11 @@ El iris usa una rampa de seis tonos elegidos a mano, con fibras radiales que sal
 pupila, anillo limbal oscuro, la sombra que proyecta el párpado sobre el globo, línea de
 agua en el párpado inferior y dos brillos (el principal y el de luz rebotada).
 
+La mirada está trabajada con la esquina de afuera levantada, delineado que engorda hacia
+ese lado y termina en un rabillo, sombra rosada pegada al párpado, brillo en el lagrimal,
+cejas arqueadas con el pico en el tercio exterior, y pestañas más largas y más juntas
+hacia afuera, con unas cortas por debajo.
+
 **Las luciérnagas se reflejan dentro del iris.** Las posiciones salen de las luciérnagas
 de verdad: se lee dónde está cada una en la pantalla y se comprime la escena dentro del
 disco del iris, invertida, como en cualquier reflejo.
@@ -40,8 +45,6 @@ disco del iris, invertida, como en cualquier reflejo.
 Alrededor, cielo estrellado, luna cuadrada, árboles en penumbra y luciérnagas que vuelan y
 titilan. Cada click suelta chispas y deja luciérnagas nuevas. El letrero dice
 **ERES LA LUZ DE MI VIDA**.
-
-El botón de arriba a la izquierda alterna entre el estilo nuevo y el original, para comparar.
 
 ## Qué incluye el cofre
 
