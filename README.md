@@ -31,7 +31,18 @@ los renglones vecinos apagados y desenfocados, difuminándose hacia los bordes.
 **Para poner otra letra** se cambia nada más el arreglo `LETRA` al inicio del script de
 `luz.html`: cada renglón es `{ t: 'TEXTO', d: segundos }`. El tamaño de la letra, el
 centrado y los tiempos se acomodan solos a partir de eso. Un renglón con texto vacío sirve
-de respiro entre estrofas. Sólo mayúsculas y sin acentos, que es lo que dibuja la fuente.
+de respiro entre estrofas.
+
+## La fuente
+
+Está dibujada a mano, píxel por píxel, y no depende de ninguna fuente instalada. Cada letra
+mide 5×7; encima se reservan dos filas para los acentos y abajo una para la sombra dura del
+juego, así que la caja completa es de 5×10.
+
+Admite **acentos** (á é í ó ú, à è ì ò ù, ä ë ï ö ü, â ê î ô û), **ñ**, **¿ ¡**, los
+**números 0-9**, signos (`. , : ; - _ ' " ( ) / + < > & ! ?`) y un **corazón ♥**. Se escribe
+en minúsculas o mayúsculas indistintamente: la fuente pasa todo a mayúsculas. Si llega un
+carácter que no conoce, le quita el acento y dibuja la letra sin él en vez de dejar un hueco.
 
 ## La noche de luciérnagas
 

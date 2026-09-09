@@ -260,8 +260,13 @@ function shade(hex, f) {
 }
 
 /* ==========================================================
-   2. Tipografia pixelada 5x7 (estilo Minecraft)
+   2. Tipografia pixelada (estilo Minecraft)
+   ----------------------------------------------------------
+   Cada letra mide 5x7. Encima se reservan 2 filas para los
+   acentos y abajo 1 para la sombra: la caja completa es 5x10.
    ========================================================== */
+const AVANCE = 6, ALTO_ACENTO = 2, CAJA = 10;
+
 const FONT = {
   A:"01110,10001,10001,11111,10001,10001,10001", B:"11110,10001,10001,11110,10001,10001,11110",
   C:"01111,10000,10000,10000,10000,10000,01111", D:"11110,10001,10001,10001,10001,10001,11110",
@@ -276,27 +281,80 @@ const FONT = {
   U:"10001,10001,10001,10001,10001,10001,01110", V:"10001,10001,10001,10001,10001,01010,00100",
   W:"10001,10001,10001,10101,10101,11011,10001", X:"10001,10001,01010,00100,01010,10001,10001",
   Y:"10001,10001,01010,00100,00100,00100,00100", Z:"11111,00001,00010,00100,01000,10000,11111",
+  "0":"01110,10001,10011,10101,11001,10001,01110", "1":"00100,01100,00100,00100,00100,00100,01110",
+  "2":"01110,10001,00001,00010,00100,01000,11111", "3":"11111,00010,00100,00010,00001,10001,01110",
+  "4":"00010,00110,01010,10010,11111,00010,00010", "5":"11111,10000,11110,00001,00001,10001,01110",
+  "6":"00110,01000,10000,11110,10001,10001,01110", "7":"11111,00001,00010,00100,01000,01000,01000",
+  "8":"01110,10001,10001,01110,10001,10001,01110", "9":"01110,10001,10001,01111,00001,00010,01100",
+
   "!":"00100,00100,00100,00100,00100,00000,00100", "?":"01110,10001,00001,00110,00100,00000,00100",
-  ".":"00000,00000,00000,00000,00000,00000,00100", " ":"00000,00000,00000,00000,00000,00000,00000"
+  "¡":"00100,00000,00100,00100,00100,00100,00100",
+  "¿":"00100,00000,00100,01100,10000,10001,01110",
+  ".":"00000,00000,00000,00000,00000,00000,00100", ",":"00000,00000,00000,00000,00110,00100,01000",
+  ":":"00000,00100,00000,00000,00000,00100,00000", ";":"00000,00100,00000,00000,00100,00100,01000",
+  "-":"00000,00000,00000,01110,00000,00000,00000", "_":"00000,00000,00000,00000,00000,00000,11111",
+  "'":"00100,00100,00000,00000,00000,00000,00000", '"':"01010,01010,00000,00000,00000,00000,00000",
+  "(":"00010,00100,01000,01000,01000,00100,00010", ")":"01000,00100,00010,00010,00010,00100,01000",
+  "/":"00001,00010,00010,00100,01000,01000,10000", "+":"00000,00100,00100,11111,00100,00100,00000",
+  "<":"00010,00100,01000,10000,01000,00100,00010", ">":"01000,00100,00010,00001,00010,00100,01000",
+  "&":"01100,10010,10100,01000,10101,10010,01101",
+  "♥":"01010,11111,11111,11111,01110,00100,00000",
+  " ":"00000,00000,00000,00000,00000,00000,00000"
 };
+
+// Los acentos se dibujan en las dos filas de arriba, sobre la letra base.
+const MARCAS = {
+  agudo:    "00010,00100",
+  grave:    "01000,00100",
+  dieresis: "00000,01010",
+  tilde:    "01101,10110",
+  gorro:    "00100,01010"
+};
+const ACENTUADAS = {
+  "Á":["A","agudo"],    "É":["E","agudo"],    "Í":["I","agudo"],
+  "Ó":["O","agudo"],    "Ú":["U","agudo"],
+  "À":["A","grave"],    "È":["E","grave"],    "Ì":["I","grave"],
+  "Ò":["O","grave"],    "Ù":["U","grave"],
+  "Ä":["A","dieresis"], "Ë":["E","dieresis"], "Ï":["I","dieresis"],
+  "Ö":["O","dieresis"], "Ü":["U","dieresis"],
+  "Â":["A","gorro"],    "Ê":["E","gorro"],    "Î":["I","gorro"],
+  "Ô":["O","gorro"],    "Û":["U","gorro"],
+  "Ñ":["N","tilde"],    "Ã":["A","tilde"],    "Õ":["O","tilde"]
+};
+
+// Que letra y que acento le toca a cada caracter. Si llega uno que no
+// conocemos, se le quita el acento y se usa la letra pelona.
+function glifo(ch) {
+  if (FONT[ch]) return { base: ch, marca: null };
+  if (ACENTUADAS[ch]) return { base: ACENTUADAS[ch][0], marca: ACENTUADAS[ch][1] };
+  const pelado = [...ch.normalize('NFD')]
+    .filter(c => c.charCodeAt(0) < 0x300 || c.charCodeAt(0) > 0x36f)
+    .join('');
+  return { base: FONT[pelado] ? pelado : ' ', marca: null };
+}
 
 // El texto de Minecraft lleva una sombra dura desplazada un pixel.
 function pixelText(text, color, shadow = '#2a1608') {
   const chars = [...text.toUpperCase()];
-  const W = chars.length * 6, H = 8;   // +1 en cada eje por la sombra
   let main = '', shad = '';
+  const punto = (px, py) => {
+    shad += `<rect x="${px + 1}" y="${py + 1}" width="1" height="1" fill="${shadow}"/>`;
+    main += `<rect x="${px}" y="${py}" width="1" height="1" fill="${color}"/>`;
+  };
+
   chars.forEach((ch, i) => {
-    const glyph = FONT[ch] || FONT[' '];
-    glyph.split(',').forEach((row, y) => {
-      [...row].forEach((bit, x) => {
-        if (bit !== '1') return;
-        const px = i * 6 + x;
-        shad += `<rect x="${px + 1}" y="${y + 1}" width="1" height="1" fill="${shadow}"/>`;
-        main += `<rect x="${px}" y="${y}" width="1" height="1" fill="${color}"/>`;
-      });
+    const { base, marca } = glifo(ch);
+    const x0 = i * AVANCE;
+    FONT[base].split(',').forEach((fila, y) => {
+      [...fila].forEach((bit, x) => { if (bit === '1') punto(x0 + x, y + ALTO_ACENTO); });
+    });
+    if (marca) MARCAS[marca].split(',').forEach((fila, y) => {
+      [...fila].forEach((bit, x) => { if (bit === '1') punto(x0 + x, y); });
     });
   });
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" `
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" `
+       + `viewBox="0 0 ${Math.max(1, chars.length * AVANCE)} ${CAJA}" `
        + `preserveAspectRatio="xMidYMid meet">${shad}${main}</svg>`;
 }
 
@@ -482,7 +540,7 @@ $('base').innerHTML = chestBase();
 $('hint').innerHTML = pixelText('HAZ CLICK', '#ffffff', '#31465e');
 $('credit').innerHTML = pixelText('ABRE EL COFRE', '#ffffff', '#3f5a78');
 $('signHearts').innerHTML = HEART_SVG.repeat(3);
-$('btnSi').innerHTML = pixelText('SI', '#ffffff', '#1e3d12');
+$('btnSi').innerHTML = pixelText('SÍ', '#ffffff', '#1e3d12');
 $('btnNo').innerHTML = pixelText('NO', '#ffffff', '#43120e');
 
 // Las dos lineas comparten tamano de pixel: el ancho va segun cuantas letras tiene cada una.
@@ -604,11 +662,11 @@ const chest = $('chest'), sign = $('sign'), hint = $('hint'), botones = $('boton
 
 // Cada vez que responde NO, el cartel insiste un poco mas.
 const PREGUNTAS = [
-  ['QUIERES SER', 'MI TODO?'],
-  ['ESTAS',       'SEGURA?'],
-  ['PIENSALO',    'BIEN'],
-  ['SEGURA',      'SEGURA?'],
-  ['EL BOTON SI', 'ES MAS BONITO']
+  ['¿QUIERES SER', 'MI TODO?'],
+  ['¿ESTÁS',       'SEGURA?'],
+  ['PIÉNSALO',     'BIEN'],
+  ['¿SEGURA',      'SEGURA?'],
+  ['EL BOTÓN SÍ',  'ES MÁS BONITO']
 ];
 
 let fase = 'cerrado';
@@ -639,7 +697,7 @@ function abrirCofre() {
     hint.classList.add('gone');
     mostrarPregunta();
     sign.classList.add('show');
-    $('credit').innerHTML = pixelText('RESPONDE CON EL CORAZON', '#ffffff', '#3f5a78');
+    $('credit').innerHTML = pixelText('RESPONDE CON EL CORAZÓN ♥', '#ffffff', '#3f5a78');
   }, 900);
 }
 
@@ -658,7 +716,7 @@ function decirQueSi() {
   botones.classList.add('gone');
   $('signHearts').classList.add('show');
   setLines('TE AMO', 'FANISITA', '#ff4d6d', '#4a121f', '#ffe08a', '#5a3d10');
-  $('credit').innerHTML = pixelText('CLICK PARA MAS FLORES', '#ffffff', '#3f5a78');
+  $('credit').innerHTML = pixelText('CLICK PARA MÁS FLORES ♥', '#ffffff', '#3f5a78');
   $('masSorpresa').innerHTML = pixelText('OTRA SORPRESA', '#ffffff', '#16224a');
   $('masSorpresa').classList.add('show');
 

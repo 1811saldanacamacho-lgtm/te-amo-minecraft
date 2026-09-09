@@ -197,8 +197,13 @@ const pick = (arr, x, y) => {
 };
 
 /* ==========================================================
-   1. Tipografia pixelada 5x7 (estilo Minecraft)
+   1. Tipografia pixelada (estilo Minecraft)
+   ----------------------------------------------------------
+   Cada letra mide 5x7. Encima se reservan 2 filas para los
+   acentos y abajo 1 para la sombra: la caja completa es 5x10.
    ========================================================== */
+const AVANCE = 6, ALTO_ACENTO = 2, CAJA = 10;
+
 const FONT = {
   A:"01110,10001,10001,11111,10001,10001,10001", B:"11110,10001,10001,11110,10001,10001,11110",
   C:"01111,10000,10000,10000,10000,10000,01111", D:"11110,10001,10001,10001,10001,10001,11110",
@@ -213,26 +218,80 @@ const FONT = {
   U:"10001,10001,10001,10001,10001,10001,01110", V:"10001,10001,10001,10001,10001,01010,00100",
   W:"10001,10001,10001,10101,10101,11011,10001", X:"10001,10001,01010,00100,01010,10001,10001",
   Y:"10001,10001,01010,00100,00100,00100,00100", Z:"11111,00001,00010,00100,01000,10000,11111",
+  "0":"01110,10001,10011,10101,11001,10001,01110", "1":"00100,01100,00100,00100,00100,00100,01110",
+  "2":"01110,10001,00001,00010,00100,01000,11111", "3":"11111,00010,00100,00010,00001,10001,01110",
+  "4":"00010,00110,01010,10010,11111,00010,00010", "5":"11111,10000,11110,00001,00001,10001,01110",
+  "6":"00110,01000,10000,11110,10001,10001,01110", "7":"11111,00001,00010,00100,01000,01000,01000",
+  "8":"01110,10001,10001,01110,10001,10001,01110", "9":"01110,10001,10001,01111,00001,00010,01100",
+
   "!":"00100,00100,00100,00100,00100,00000,00100", "?":"01110,10001,00001,00110,00100,00000,00100",
-  "<":"00010,00100,01000,10000,01000,00100,00010",
-  ".":"00000,00000,00000,00000,00000,00000,00100", " ":"00000,00000,00000,00000,00000,00000,00000"
+  "¡":"00100,00000,00100,00100,00100,00100,00100",
+  "¿":"00100,00000,00100,01100,10000,10001,01110",
+  ".":"00000,00000,00000,00000,00000,00000,00100", ",":"00000,00000,00000,00000,00110,00100,01000",
+  ":":"00000,00100,00000,00000,00000,00100,00000", ";":"00000,00100,00000,00000,00100,00100,01000",
+  "-":"00000,00000,00000,01110,00000,00000,00000", "_":"00000,00000,00000,00000,00000,00000,11111",
+  "'":"00100,00100,00000,00000,00000,00000,00000", '"':"01010,01010,00000,00000,00000,00000,00000",
+  "(":"00010,00100,01000,01000,01000,00100,00010", ")":"01000,00100,00010,00010,00010,00100,01000",
+  "/":"00001,00010,00010,00100,01000,01000,10000", "+":"00000,00100,00100,11111,00100,00100,00000",
+  "<":"00010,00100,01000,10000,01000,00100,00010", ">":"01000,00100,00010,00001,00010,00100,01000",
+  "&":"01100,10010,10100,01000,10101,10010,01101",
+  "♥":"01010,11111,11111,11111,01110,00100,00000",
+  " ":"00000,00000,00000,00000,00000,00000,00000"
 };
+
+// Los acentos se dibujan en las dos filas de arriba, sobre la letra base.
+const MARCAS = {
+  agudo:    "00010,00100",
+  grave:    "01000,00100",
+  dieresis: "00000,01010",
+  tilde:    "01101,10110",
+  gorro:    "00100,01010"
+};
+const ACENTUADAS = {
+  "Á":["A","agudo"],    "É":["E","agudo"],    "Í":["I","agudo"],
+  "Ó":["O","agudo"],    "Ú":["U","agudo"],
+  "À":["A","grave"],    "È":["E","grave"],    "Ì":["I","grave"],
+  "Ò":["O","grave"],    "Ù":["U","grave"],
+  "Ä":["A","dieresis"], "Ë":["E","dieresis"], "Ï":["I","dieresis"],
+  "Ö":["O","dieresis"], "Ü":["U","dieresis"],
+  "Â":["A","gorro"],    "Ê":["E","gorro"],    "Î":["I","gorro"],
+  "Ô":["O","gorro"],    "Û":["U","gorro"],
+  "Ñ":["N","tilde"],    "Ã":["A","tilde"],    "Õ":["O","tilde"]
+};
+
+// Que letra y que acento le toca a cada caracter. Si llega uno que no
+// conocemos, se le quita el acento y se usa la letra pelona.
+function glifo(ch) {
+  if (FONT[ch]) return { base: ch, marca: null };
+  if (ACENTUADAS[ch]) return { base: ACENTUADAS[ch][0], marca: ACENTUADAS[ch][1] };
+  const pelado = [...ch.normalize('NFD')]
+    .filter(c => c.charCodeAt(0) < 0x300 || c.charCodeAt(0) > 0x36f)
+    .join('');
+  return { base: FONT[pelado] ? pelado : ' ', marca: null };
+}
 
 // El texto de Minecraft lleva una sombra dura desplazada un pixel.
 function pixelText(text, color, shadow = '#2a1608') {
   const chars = [...text.toUpperCase()];
   let main = '', shad = '';
+  const punto = (px, py) => {
+    shad += `<rect x="${px + 1}" y="${py + 1}" width="1" height="1" fill="${shadow}"/>`;
+    main += `<rect x="${px}" y="${py}" width="1" height="1" fill="${color}"/>`;
+  };
+
   chars.forEach((ch, i) => {
-    (FONT[ch] || FONT[' ']).split(',').forEach((row, y) => {
-      [...row].forEach((bit, x) => {
-        if (bit !== '1') return;
-        const px = i * 6 + x;
-        shad += `<rect x="${px + 1}" y="${y + 1}" width="1" height="1" fill="${shadow}"/>`;
-        main += `<rect x="${px}" y="${y}" width="1" height="1" fill="${color}"/>`;
-      });
+    const { base, marca } = glifo(ch);
+    const x0 = i * AVANCE;
+    FONT[base].split(',').forEach((fila, y) => {
+      [...fila].forEach((bit, x) => { if (bit === '1') punto(x0 + x, y + ALTO_ACENTO); });
+    });
+    if (marca) MARCAS[marca].split(',').forEach((fila, y) => {
+      [...fila].forEach((bit, x) => { if (bit === '1') punto(x0 + x, y); });
     });
   });
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${chars.length * 6} 8" `
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" `
+       + `viewBox="0 0 ${Math.max(1, chars.length * AVANCE)} ${CAJA}" `
        + `preserveAspectRatio="xMidYMid meet">${shad}${main}</svg>`;
 }
 
@@ -243,7 +302,7 @@ function pixelText(text, color, shadow = '#2a1608') {
    Para poner otra letra se cambia nada mas este arreglo: el
    tamano, el centrado y los tiempos se acomodan solos.
    Un renglon vacio sirve de respiro entre estrofas.
-   Solo mayusculas y sin acentos, que es lo que dibuja la fuente.
+   Se pueden usar acentos, ñ, ¿ ¡, numeros y signos.
    ========================================================== */
 const LETRA = [
   { t: 'FANISITA',             d: 3.0 },
@@ -255,13 +314,13 @@ const LETRA = [
   { t: 'DE MI VIDA',           d: 3.4 },
   { t: '',                     d: 1.2 },
   { t: 'TUS OJOS ME ALUMBRAN', d: 3.8 },
-  { t: 'CUANDO TODO ESTA',     d: 3.0 },
+  { t: 'CUANDO TODO ESTÁ',     d: 3.0 },
   { t: 'OSCURO',               d: 2.6 },
-  { t: 'NO SE COMO LE HACES',  d: 3.6 },
+  { t: 'NO SÉ CÓMO LE HACES',  d: 3.6 },
   { t: 'PERO ME HACES BIEN',   d: 3.6 },
   { t: '',                     d: 1.2 },
   { t: 'SI ME PREGUNTAN',      d: 3.2 },
-  { t: 'QUE ES LA FELICIDAD',  d: 3.6 },
+  { t: 'QUÉ ES LA FELICIDAD',  d: 3.6 },
   { t: 'DIGO TU NOMBRE',       d: 3.0 },
   { t: 'Y YA',                 d: 2.4 },
   { t: '',                     d: 1.4 },
@@ -556,10 +615,10 @@ const renglones = LETRA.map(({ t }) => {
 // El renglon mas largo manda: de ahi sale el tamano de pixel que cabe.
 const MAS_LARGO = Math.max(...LETRA.map(l => l.t.length), 1);
 function medirLetra() {
-  // Ancho de un renglon = caracteres * 6 * (alto / 8). Se despeja el alto.
-  const cabeAncho = (innerWidth * .88) / (MAS_LARGO * 0.75);
-  const cabeAlto  = (innerHeight * .30) / (3 * 1.75);   // el bloque ocupa ~30% del alto
-  const alto = Math.max(11, Math.min(38, cabeAncho, cabeAlto));
+  // Ancho de un renglon = caracteres * AVANCE * (alto / CAJA). Se despeja el alto.
+  const cabeAncho = (innerWidth * .88) / (MAS_LARGO * AVANCE / CAJA);
+  const cabeAlto  = (innerHeight * .34) / (3 * 1.75);   // el bloque ocupa ~34% del alto
+  const alto = Math.max(13, Math.min(48, cabeAncho, cabeAlto));
   const raiz = document.documentElement.style;
   raiz.setProperty('--alto-texto', alto + 'px');
   raiz.setProperty('--alto-linea', Math.round(alto * 1.75) + 'px');
@@ -701,7 +760,7 @@ const ARBOL = [
    4. Textos e interaccion
    ========================================================== */
 $('volver').innerHTML = pixelText('< VOLVER', '#ffffff', '#2c1c0a');
-$('pie').innerHTML = pixelText('CLICK PARA MAS LUCIERNAGAS', '#cfd6ff', '#1a1f3d');
+$('pie').innerHTML = pixelText('CLICK PARA MÁS LUCIÉRNAGAS ♥', '#cfd6ff', '#1a1f3d');
 
 $('volver').addEventListener('pointerdown', e => {
   e.stopPropagation();
