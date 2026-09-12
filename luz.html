@@ -102,41 +102,36 @@
   /* ---------- La cancion, debajo de los ojos ---------- */
   :root { --alto-texto: 24px; --alto-linea: 42px; }
 
-  /* La pareja a los lados y la letra en medio. */
-  #zonaLetra {
-    width: 100%;
-    max-width: min(96%, 880px);   /* asi la pareja enmarca la letra en vez de irse a las orillas */
-    margin: 0 auto;
-    display: flex; align-items: center; justify-content: center;
-    gap: clamp(4px, 1.6vw, 26px);
+  /* La pareja, chiquita, bailando junta sobre el pasto. */
+  #pareja {
+    --anchoB: clamp(30px, 6vw, 50px);
+    position: absolute; z-index: 3;
+    bottom: 70px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; align-items: flex-end;
+    filter: drop-shadow(0 0 10px rgba(200,215,255,.18));
   }
   .bailarin {
-    flex: 0 0 auto;
-    width: clamp(52px, 12vw, 104px);
+    width: var(--anchoB);
     aspect-ratio: 26 / 36;
     background-repeat: no-repeat;
     background-size: 100% 100%;
     image-rendering: pixelated;
     transform-origin: bottom center;
     animation: baila 1.6s ease-in-out infinite;
-    filter: drop-shadow(0 0 12px rgba(200,215,255,.20));
   }
-  /* Se balancean en contratiempo, como si se siguieran. */
-  #chica { animation-delay: -.8s; transform: scaleX(-1); }
+  /* El espejo va en `scale`, aparte de la animacion: asi la chica queda
+     volteada aunque el balanceo no corra. Se enciman un poco para que las
+     manos de adentro se junten. */
+  #chica { scale: -1 1; margin-left: calc(var(--anchoB) * -.155); }
   @keyframes baila {
-    0%, 100% { transform: rotate(-4deg) translateY(0); }
-    50%      { transform: rotate(4deg) translateY(-4px); }
-  }
-  #chica { animation-name: bailaEspejo; }
-  @keyframes bailaEspejo {
-    0%, 100% { transform: scaleX(-1) rotate(4deg) translateY(0); }
-    50%      { transform: scaleX(-1) rotate(-4deg) translateY(-4px); }
+    0%, 100% { rotate: -2.5deg; translate: 0 0; }
+    50%      { rotate: 2.5deg;  translate: 0 -2px; }
   }
 
   #ventana {
     position: relative;
-    flex: 1 1 auto;
-    min-width: 0;
+    width: 100%;
     height: calc(var(--alto-linea) * 3);
     overflow: hidden;
     -webkit-mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent);
@@ -213,11 +208,12 @@
       <canvas id="reflejos" width="170" height="84"></canvas>
     </div>
 
-    <div id="zonaLetra">
-      <div class="bailarin" id="chico"></div>
-      <div id="ventana"><div id="letra"></div></div>
-      <div class="bailarin" id="chica"></div>
-    </div>
+    <div id="ventana"><div id="letra"></div></div>
+  </div>
+
+  <div id="pareja">
+    <div class="bailarin" id="chico"></div>
+    <div class="bailarin" id="chica"></div>
   </div>
 
   <div id="fx"></div>
@@ -763,15 +759,16 @@ function trapecioB(L, y0, y1, w0, w1, cx0, cx1, color) {
   }
 }
 
-// El brazo de adentro (el de la derecha del dibujo) es el que se alza
-// hacia la letra; al espejar a la chica queda mirando hacia el chico.
+// La mano de adentro (la de la derecha del dibujo) se queda casi quieta a la
+// altura del hombro: es la que va tomada con la de la pareja, porque la chica
+// se dibuja en espejo. El baile lo hacen el otro brazo y las piernas.
 const POSES = [
-  { codoI: [7, 17],  manoI: [4, 13],  codoD: [20, 15], manoD: [23, 8],
-    rodI: [11, 26],  pieI: [9, 32],   rodD: [16, 26],  pieD: [19, 32],  sesgo: -1.2 },
-  { codoI: [6, 16],  manoI: [3, 19],  codoD: [20, 16], manoD: [22, 11],
+  { codoI: [7, 16],  manoI: [4, 12],  codoD: [20, 13], manoD: [24, 12],
+    rodI: [11, 26],  pieI: [9, 32],   rodD: [16, 26],  pieD: [19, 32],  sesgo: -1.1 },
+  { codoI: [6, 17],  manoI: [3, 20],  codoD: [20, 14], manoD: [24, 12],
     rodI: [12, 26],  pieI: [12, 32],  rodD: [15, 26],  pieD: [15, 32],  sesgo: 0 },
-  { codoI: [7, 15],  manoI: [5, 10],  codoD: [19, 17], manoD: [23, 13],
-    rodI: [10, 26],  pieI: [8, 32],   rodD: [16, 27],  pieD: [18, 31],  sesgo: 1.2 }
+  { codoI: [7, 14],  manoI: [5, 9],   codoD: [20, 12], manoD: [24, 11],
+    rodI: [10, 26],  pieI: [8, 32],   rodD: [16, 27],  pieD: [18, 31],  sesgo: 1.1 }
 ];
 
 function armarBailarin(pose, esChica) {
@@ -863,9 +860,10 @@ const CUADROS_CHICA = POSES.map(p => bailarinURL(armarBailarin(p, true)));
 
 let cuadroB = 0;
 function pasoDeBaile() {
+  // El mismo cuadro para los dos: asi las manos tomadas quedan a la misma
+  // altura y el paso se ve acompasado, como debe bailar una pareja.
   $('chico').style.backgroundImage = CUADROS_CHICO[cuadroB];
-  // Desfasada: uno sube el brazo mientras la otra lo baja.
-  $('chica').style.backgroundImage = CUADROS_CHICA[(cuadroB + 2) % POSES.length];
+  $('chica').style.backgroundImage = CUADROS_CHICA[cuadroB];
   cuadroB = (cuadroB + 1) % POSES.length;
 }
 pasoDeBaile();
