@@ -66,6 +66,54 @@
   }
   @keyframes mece { 0%,100% { rotate: -2.5deg; } 50% { rotate: 2.5deg; } }
 
+  /* ---------- Torres de luces ---------- */
+  .torre {
+    position: absolute; z-index: 3;
+    bottom: 78px;
+    width: clamp(15px, 2.8vw, 28px);
+    aspect-ratio: 12 / 64;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    image-rendering: pixelated;
+  }
+  #torreIzq { left: 4%; }
+  #torreDer { right: 4%; }
+
+  /* El haz sale del cabezal y se abre hacia arriba. Sin mix-blend-mode a
+     proposito: la torre lleva z-index y eso aislaria la mezcla del cielo. */
+  .haz {
+    position: absolute;
+    left: 50%; bottom: calc(100% - 6px);
+    width: 30vmax; height: 40vmax;
+    margin-left: -15vmax;
+    clip-path: polygon(50% 100%, 76% 0, 24% 0);
+    transform-origin: 50% 100%;
+    pointer-events: none;
+    animation: barrer ease-in-out infinite alternate;
+  }
+  @keyframes barrer {
+    from { rotate: -28deg; }
+    to   { rotate: 28deg; }
+  }
+  .h1 { background: linear-gradient(to top, rgba(255,92,158,.50), rgba(255,92,158,0) 72%);
+        animation-duration: 5.4s; }
+  .h2 { background: linear-gradient(to top, rgba(110,198,255,.46), rgba(110,198,255,0) 72%);
+        animation-duration: 7.1s; animation-delay: -2.3s; }
+  .h3 { background: linear-gradient(to top, rgba(192,140,255,.44), rgba(192,140,255,0) 72%);
+        animation-duration: 6.3s; animation-delay: -4.1s; }
+
+  /* Los focos del cabezal, latiendo */
+  .lampara {
+    position: absolute;
+    left: 50%; bottom: calc(100% - 9px);
+    width: 10px; height: 10px;
+    margin-left: -5px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,240,210,.95), rgba(255,170,220,.35) 45%, transparent 70%);
+    animation: latir 1.2s ease-in-out infinite;
+  }
+  @keyframes latir { 0%,100% { opacity: .55; transform: scale(1); } 50% { opacity: 1; transform: scale(1.45); } }
+
   /* ---------- Escenario ---------- */
   .stage {
     position: relative; z-index: 5;
@@ -714,9 +762,13 @@ const PIEL_CH   = ['#c8a083', '#bd9576', '#d2aa8d'];
 const PIEL_CA   = ['#d9b298', '#cda48a', '#e2bda3'];
 const PELO_CH   = ['#332417', '#281c12', '#3d2c1c'];
 const PELO_CA   = ['#4a2c18', '#3b2212', '#57351e'];
-const CAMISA    = ['#e4e9f6', '#d2d9ec', '#f0f4ff'];   // blanca, atrapa la luna
-const PANTALON  = ['#2b3a5e', '#22304e', '#33456c'];
-const VESTIDO   = ['#b04a6e', '#9c3e60', '#c25a80'];
+// De fiesta: el traje de el y el vestido negro de ella. No son negro puro:
+// contra un cielo asi de oscuro se perderian, y lo que se veria seria un
+// hueco. Van en gris azulado, que es como se ve la ropa negra de noche.
+const TRAJE     = ['#3b4159', '#333850', '#464d67'];
+const CAMISA    = ['#e4e9f6', '#d2d9ec', '#f0f4ff'];   // la camisa asoma en el pecho
+const CORBATA   = ['#9c2445', '#821c37'];
+const VESTIDO   = ['#33343f', '#2b2c36', '#3f414e'];
 const ZAPATO    = ['#1b1510', '#241d15'];
 const OJITO     = '#241a12';
 const BOCA      = '#8a5a4a';
@@ -775,28 +827,31 @@ function armarBailarin(pose, esChica) {
   const L = lienzoB();
   const piel = esChica ? PIEL_CA : PIEL_CH;
   const pelo = esChica ? PELO_CA : PELO_CH;
-  const ropa = esChica ? VESTIDO : CAMISA;
+  const ropa = esChica ? VESTIDO : TRAJE;   // el saco de el, el vestido de ella
   const h = pose.sesgo;                       // el cuerpo se ladea con el paso
   const cx = 13 + h * .7;                     // centro de la cabeza
 
   // 1. La melena de la chica va detras de todo
   if (esChica) trapecioB(L, 4, 18, 8, 13, cx, cx - h * .8, pelo);
 
-  // 2. Piernas y zapatos
-  const pierna = esChica ? piel : PANTALON;
+  // 2. Piernas y zapatos: el de traje lleva pantalon de vestir
+  const pierna = esChica ? piel : TRAJE;
   [['rodI', 'pieI', 12], ['rodD', 'pieD', 14]].forEach(([rod, pie, xCadera]) => {
     lineaB(L, xCadera + h, 21, pose[rod][0], pose[rod][1], 3, pierna);
     lineaB(L, pose[rod][0], pose[rod][1], pose[pie][0], pose[pie][1], 3, pierna);
     lineaB(L, pose[pie][0] - 1, pose[pie][1] + 1, pose[pie][0] + 1, pose[pie][1] + 1, 2, ZAPATO);
   });
 
-  // 3. Torso: camisa y pantalon, o corpino y falda que vuela
+  // 3. Torso: vestido negro largo, o saco con camisa y corbata
   if (esChica) {
-    trapecioB(L, 11, 16, 8, 6, 13, 13 + h * .5, ropa);
-    trapecioB(L, 16, 26, 6, 17, 13 + h * .5, 13 + h * 2.2, ropa);
+    trapecioB(L, 11, 16, 8, 6, 13, 13 + h * .5, ropa);          // corpino
+    trapecioB(L, 16, 27, 6, 17, 13 + h * .5, 13 + h * 2.2, ropa); // falda que vuela
   } else {
-    trapecioB(L, 11, 20, 9, 7, 13, 13 + h * .5, ropa);
-    trapecioB(L, 20, 22, 7, 7, 13 + h * .5, 13 + h, PANTALON);
+    trapecioB(L, 11, 22, 9, 7, 13, 13 + h * .5, ropa);          // saco y pantalon
+    // La camisa hace la V del cuello: ancha arriba y en punta abajo. Solapas
+    // aparte no caben en un torso de 9 pixeles, salen como rayas.
+    trapecioB(L, 12, 20, 4, 1, 13, 13 + h * .5, CAMISA);
+    lineaB(L, 13 + h * .3, 13, 13 + h * .5, 19, 1, CORBATA);
   }
 
   // 4. Brazos: manga de la ropa y antebrazo de piel
@@ -958,6 +1013,62 @@ const ARBOL = [
   t.style.left = left + '%';
   t.style.width = w + 'px';
   t.style.animationDelay = (-i * 1.5) + 's';
+  document.body.appendChild(t);
+});
+
+/* ==========================================================
+   3b. Torres de luces de baile
+   ----------------------------------------------------------
+   La estructura es una celosia de pixeles; los haces y el foco
+   del cabezal son capas de CSS que giran encima.
+   ========================================================== */
+function torreSVG() {
+  const W = 12, H = 64;
+  const metal = ['#6b707c', '#7d8391', '#585d68'];
+  const oscuro = '#2a2d35';
+  const px = new Array(W * H).fill(null);
+  const pon = (x, y, c) => {
+    x = Math.round(x); y = Math.round(y);
+    if (x >= 0 && x < W && y >= 0 && y < H && c) px[y * W + x] = c;
+  };
+
+  for (let y = 4; y < H - 3; y++)               // los dos rieles
+    [1, 2, 9, 10].forEach(x => pon(x, y, pick(metal, x, y)));
+  for (let y = 6; y < H - 4; y += 8)            // travesanos
+    for (let x = 2; x <= 9; x++) pon(x, y, pick(metal, x, y));
+  for (let y0 = 6; y0 < H - 12; y0 += 8)        // diagonales cruzadas
+    for (let i = 0; i < 8; i++) {
+      pon(2 + i, y0 + i, pick(metal, 2 + i, y0 + i));
+      pon(9 - i, y0 + i, pick(metal, 9 - i, y0 + i));
+    }
+  for (let x = 0; x < W; x++) {                 // cabezal
+    pon(x, 2, oscuro);
+    pon(x, 3, pick(metal, x, 3));
+  }
+  [2, 5, 8].forEach(x => { pon(x, 0, '#ffeec0'); pon(x, 1, '#ffd070'); });
+  for (let x = 0; x < W; x++) {                 // base
+    pon(x, H - 3, pick(metal, x, H - 3));
+    pon(x, H - 2, oscuro);
+  }
+
+  let r = '';
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++)
+      if (px[y * W + x]) r += `<rect x="${x}" y="${y}" width="1" height="1" fill="${px[y * W + x]}"/>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" `
+       + `shape-rendering="crispEdges">${r}</svg>`;
+}
+
+const FONDO_TORRE = `url("data:image/svg+xml,${encodeURIComponent(torreSVG())}")`;
+['torreIzq', 'torreDer'].forEach((id, i) => {
+  const t = document.createElement('div');
+  t.className = 'torre';
+  t.id = id;
+  t.style.backgroundImage = FONDO_TORRE;
+  t.innerHTML = '<div class="haz h1"></div><div class="haz h2"></div>'
+              + '<div class="haz h3"></div><div class="lampara"></div>';
+  // La torre de la derecha barre al reves, para que los haces se crucen.
+  if (i === 1) [...t.children].forEach(c => { c.style.animationDirection = 'alternate-reverse'; });
   document.body.appendChild(t);
 });
 

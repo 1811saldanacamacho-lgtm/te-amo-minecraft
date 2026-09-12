@@ -28,12 +28,20 @@ Debajo de los ojos corre la letra estilo karaoke: los renglones suben solos y ca
 va encendiendo de izquierda a derecha, como si lo fueran cantando. Arriba y abajo quedan
 los renglones vecinos apagados y desenfocados, difuminándose hacia los bordes.
 
-Abajo, sobre el pasto, una pareja chiquita baila tomada de la mano. Los cuerpos se arman
-por partes sobre una rejilla de 26×36: una "pose" dice dónde van codos, manos, rodillas y
-pies, y alternando tres poses se ve el baile. La mano de adentro se queda quieta a la
-altura del hombro —es la que va tomada— y el baile lo hacen el otro brazo y las piernas.
-La chica es el mismo dibujo en espejo, encimado apenas para que las manos se junten. El
-canto de arriba a la izquierda de cada figura va aclarado, del lado por donde les da la luna.
+Abajo, sobre el pasto, una pareja chiquita baila tomada de la mano, vestida de fiesta: él
+de traje con camisa y corbata, ella de vestido negro. Los cuerpos se arman por partes sobre
+una rejilla de 26×36: una "pose" dice dónde van codos, manos, rodillas y pies, y alternando
+tres poses se ve el baile. La mano de adentro se queda quieta a la altura del hombro —es la
+que va tomada— y el baile lo hacen el otro brazo y las piernas. La chica es el mismo dibujo
+en espejo, encimado apenas para que las manos se junten. El canto de arriba a la izquierda
+de cada figura va aclarado, del lado por donde les da la luna.
+
+Los negros de la ropa no son negro puro: contra un cielo así de oscuro se perderían y lo
+que se vería sería un hueco. Van en gris azulado, que es como se ve la ropa negra de noche.
+
+A los lados hay **dos torres de luces de baile**. La estructura es una celosía de píxeles;
+de cada cabezal salen tres haces de color —rosa, azul y violeta— que barren el cielo a
+distinto ritmo, y la de la derecha barre al revés para que los haces se crucen.
 
 **Para poner otra letra** se cambia nada más el arreglo `LETRA` al inicio del script de
 `luz.html`: cada renglón es `{ t: 'TEXTO', d: segundos }`. El tamaño de la letra, el
