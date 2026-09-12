@@ -100,9 +100,43 @@
   #retrato.parpadeo #reflejos { opacity: 0; }
 
   /* ---------- La cancion, debajo de los ojos ---------- */
+  :root { --alto-texto: 24px; --alto-linea: 42px; }
+
+  /* La pareja a los lados y la letra en medio. */
+  #zonaLetra {
+    width: 100%;
+    max-width: min(96%, 880px);   /* asi la pareja enmarca la letra en vez de irse a las orillas */
+    margin: 0 auto;
+    display: flex; align-items: center; justify-content: center;
+    gap: clamp(4px, 1.6vw, 26px);
+  }
+  .bailarin {
+    flex: 0 0 auto;
+    width: clamp(52px, 12vw, 104px);
+    aspect-ratio: 26 / 36;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    image-rendering: pixelated;
+    transform-origin: bottom center;
+    animation: baila 1.6s ease-in-out infinite;
+    filter: drop-shadow(0 0 12px rgba(200,215,255,.20));
+  }
+  /* Se balancean en contratiempo, como si se siguieran. */
+  #chica { animation-delay: -.8s; transform: scaleX(-1); }
+  @keyframes baila {
+    0%, 100% { transform: rotate(-4deg) translateY(0); }
+    50%      { transform: rotate(4deg) translateY(-4px); }
+  }
+  #chica { animation-name: bailaEspejo; }
+  @keyframes bailaEspejo {
+    0%, 100% { transform: scaleX(-1) rotate(4deg) translateY(0); }
+    50%      { transform: scaleX(-1) rotate(-4deg) translateY(-4px); }
+  }
+
   #ventana {
     position: relative;
-    width: 100%;
+    flex: 1 1 auto;
+    min-width: 0;
     height: calc(var(--alto-linea) * 3);
     overflow: hidden;
     -webkit-mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent);
@@ -179,7 +213,11 @@
       <canvas id="reflejos" width="170" height="84"></canvas>
     </div>
 
-    <div id="ventana"><div id="letra"></div></div>
+    <div id="zonaLetra">
+      <div class="bailarin" id="chico"></div>
+      <div id="ventana"><div id="letra"></div></div>
+      <div class="bailarin" id="chica"></div>
+    </div>
   </div>
 
   <div id="fx"></div>
@@ -615,8 +653,10 @@ const renglones = LETRA.map(({ t }) => {
 // El renglon mas largo manda: de ahi sale el tamano de pixel que cabe.
 const MAS_LARGO = Math.max(...LETRA.map(l => l.t.length), 1);
 function medirLetra() {
+  // El ancho disponible ya descuenta a los bailarines, porque se mide la ventana.
   // Ancho de un renglon = caracteres * AVANCE * (alto / CAJA). Se despeja el alto.
-  const cabeAncho = (innerWidth * .88) / (MAS_LARGO * AVANCE / CAJA);
+  const disponible = ($('ventana').clientWidth || innerWidth * .7) * .97;
+  const cabeAncho = disponible / (MAS_LARGO * AVANCE / CAJA);
   const cabeAlto  = (innerHeight * .34) / (3 * 1.75);   // el bloque ocupa ~34% del alto
   const alto = Math.max(13, Math.min(48, cabeAncho, cabeAlto));
   const raiz = document.documentElement.style;
@@ -663,6 +703,173 @@ addEventListener('resize', () => {
   altoRenglon = medirLetra();
   if (renglonActual >= 0) colocarLetra(renglonActual);
 });
+
+/* ==========================================================
+   2c. La pareja que baila a los lados de la letra
+   ----------------------------------------------------------
+   Los cuerpos se arman por partes (piernas, torso, brazos,
+   cabeza) sobre una rejilla de 26x36. Una "pose" es donde van
+   los codos, manos, rodillas y pies; alternando tres poses se
+   ve el baile. La chica es el mismo dibujo pero en espejo.
+   ========================================================== */
+const ANCHO_B = 26, ALTO_B = 36;
+
+const PIEL_CH   = ['#c8a083', '#bd9576', '#d2aa8d'];
+const PIEL_CA   = ['#d9b298', '#cda48a', '#e2bda3'];
+const PELO_CH   = ['#332417', '#281c12', '#3d2c1c'];
+const PELO_CA   = ['#4a2c18', '#3b2212', '#57351e'];
+const CAMISA    = ['#e4e9f6', '#d2d9ec', '#f0f4ff'];   // blanca, atrapa la luna
+const PANTALON  = ['#2b3a5e', '#22304e', '#33456c'];
+const VESTIDO   = ['#b04a6e', '#9c3e60', '#c25a80'];
+const ZAPATO    = ['#1b1510', '#241d15'];
+const OJITO     = '#241a12';
+const BOCA      = '#8a5a4a';
+const CONTORNO_B = '#0f0c14';
+
+const lienzoB = () => new Array(ANCHO_B * ALTO_B).fill(null);
+const ponB = (L, x, y, c) => {
+  x = Math.round(x); y = Math.round(y);
+  if (x >= 0 && x < ANCHO_B && y >= 0 && y < ALTO_B && c) L[y * ANCHO_B + x] = c;
+};
+
+const aclarar = (hex, f) => {
+  const n = parseInt(hex.slice(1), 16);
+  return '#' + [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+    .map(v => Math.min(255, Math.round(v + (255 - v) * f)).toString(16).padStart(2, '0'))
+    .join('');
+};
+
+function lineaB(L, x0, y0, x1, y1, grosor, color) {
+  const pasos = Math.ceil(Math.hypot(x1 - x0, y1 - y0) * 2) + 1;
+  const r = (grosor - 1) / 2;
+  for (let i = 0; i <= pasos; i++) {
+    const t = i / pasos, x = x0 + (x1 - x0) * t, y = y0 + (y1 - y0) * t;
+    for (let gy = -r; gy <= r; gy += .5)
+      for (let gx = -r; gx <= r; gx += .5)
+        ponB(L, x + gx, y + gy, pick(color, x + gx, y + gy));
+  }
+}
+function elipseB(L, cx, cy, rx, ry, color) {
+  for (let y = Math.floor(cy - ry); y <= cy + ry; y++)
+    for (let x = Math.floor(cx - rx); x <= cx + rx; x++)
+      if (Math.hypot((x - cx) / rx, (y - cy) / ry) <= 1) ponB(L, x, y, pick(color, x, y));
+}
+function trapecioB(L, y0, y1, w0, w1, cx0, cx1, color) {
+  for (let y = y0; y <= y1; y++) {
+    const t = (y - y0) / Math.max(1, y1 - y0);
+    const w = w0 + (w1 - w0) * t, cx = cx0 + (cx1 - cx0) * t;
+    for (let x = Math.round(cx - w / 2); x <= Math.round(cx + w / 2); x++)
+      ponB(L, x, y, pick(color, x, y));
+  }
+}
+
+// El brazo de adentro (el de la derecha del dibujo) es el que se alza
+// hacia la letra; al espejar a la chica queda mirando hacia el chico.
+const POSES = [
+  { codoI: [7, 17],  manoI: [4, 13],  codoD: [20, 15], manoD: [23, 8],
+    rodI: [11, 26],  pieI: [9, 32],   rodD: [16, 26],  pieD: [19, 32],  sesgo: -1.2 },
+  { codoI: [6, 16],  manoI: [3, 19],  codoD: [20, 16], manoD: [22, 11],
+    rodI: [12, 26],  pieI: [12, 32],  rodD: [15, 26],  pieD: [15, 32],  sesgo: 0 },
+  { codoI: [7, 15],  manoI: [5, 10],  codoD: [19, 17], manoD: [23, 13],
+    rodI: [10, 26],  pieI: [8, 32],   rodD: [16, 27],  pieD: [18, 31],  sesgo: 1.2 }
+];
+
+function armarBailarin(pose, esChica) {
+  const L = lienzoB();
+  const piel = esChica ? PIEL_CA : PIEL_CH;
+  const pelo = esChica ? PELO_CA : PELO_CH;
+  const ropa = esChica ? VESTIDO : CAMISA;
+  const h = pose.sesgo;                       // el cuerpo se ladea con el paso
+  const cx = 13 + h * .7;                     // centro de la cabeza
+
+  // 1. La melena de la chica va detras de todo
+  if (esChica) trapecioB(L, 4, 18, 8, 13, cx, cx - h * .8, pelo);
+
+  // 2. Piernas y zapatos
+  const pierna = esChica ? piel : PANTALON;
+  [['rodI', 'pieI', 12], ['rodD', 'pieD', 14]].forEach(([rod, pie, xCadera]) => {
+    lineaB(L, xCadera + h, 21, pose[rod][0], pose[rod][1], 3, pierna);
+    lineaB(L, pose[rod][0], pose[rod][1], pose[pie][0], pose[pie][1], 3, pierna);
+    lineaB(L, pose[pie][0] - 1, pose[pie][1] + 1, pose[pie][0] + 1, pose[pie][1] + 1, 2, ZAPATO);
+  });
+
+  // 3. Torso: camisa y pantalon, o corpino y falda que vuela
+  if (esChica) {
+    trapecioB(L, 11, 16, 8, 6, 13, 13 + h * .5, ropa);
+    trapecioB(L, 16, 26, 6, 17, 13 + h * .5, 13 + h * 2.2, ropa);
+  } else {
+    trapecioB(L, 11, 20, 9, 7, 13, 13 + h * .5, ropa);
+    trapecioB(L, 20, 22, 7, 7, 13 + h * .5, 13 + h, PANTALON);
+  }
+
+  // 4. Brazos: manga de la ropa y antebrazo de piel
+  [['codoI', 'manoI', 9], ['codoD', 'manoD', 17]].forEach(([codo, mano, xHombro]) => {
+    lineaB(L, xHombro, 12, pose[codo][0], pose[codo][1], 3, ropa);
+    lineaB(L, pose[codo][0], pose[codo][1], pose[mano][0], pose[mano][1], 2, piel);
+    elipseB(L, pose[mano][0], pose[mano][1], 1.1, 1.1, piel);
+  });
+
+  // 5. Cuello, cabeza y pelo
+  lineaB(L, 13 + h * .4, 10, 13 + h * .4, 12, 3, piel);
+  elipseB(L, cx, 6, 4.2, 4.6, piel);
+  for (let y = 1; y <= 4; y++)                // casquete: solo la coronilla
+    for (let x = -5; x <= 5; x++)
+      if (Math.hypot(x / 4.6, (y - 6) / 5.2) <= 1) ponB(L, cx + x, y, pick(pelo, cx + x, y));
+  if (esChica) {                              // fleco ladeado sobre la frente
+    lineaB(L, cx - 3, 3, cx + 1, 4, 2, pelo);
+  }
+
+  // 6. Cara
+  ponB(L, cx - 2, 6, OJITO); ponB(L, cx + 2, 6, OJITO);
+  ponB(L, cx - 1, 8, BOCA); ponB(L, cx, 8, BOCA); ponB(L, cx + 1, 8, BOCA);
+
+  // 7. La luna pega arriba y a la izquierda: ese canto se aclara
+  const copia = L.slice();
+  for (let y = 0; y < ALTO_B; y++)
+    for (let x = 0; x < ANCHO_B; x++) {
+      const c = copia[y * ANCHO_B + x];
+      if (!c) continue;
+      const izq = x === 0 ? null : copia[y * ANCHO_B + x - 1];
+      const arr = y === 0 ? null : copia[(y - 1) * ANCHO_B + x];
+      if (!izq || !arr) L[y * ANCHO_B + x] = aclarar(c, .34);
+    }
+
+  // 8. Contorno oscuro, para que se despeguen de la noche
+  const conLuz = L.slice();
+  const lleno = (x, y) => x >= 0 && x < ANCHO_B && y >= 0 && y < ALTO_B && conLuz[y * ANCHO_B + x];
+  for (let y = 0; y < ALTO_B; y++)
+    for (let x = 0; x < ANCHO_B; x++) {
+      if (conLuz[y * ANCHO_B + x]) continue;
+      if (lleno(x - 1, y) || lleno(x + 1, y) || lleno(x, y - 1) || lleno(x, y + 1))
+        L[y * ANCHO_B + x] = CONTORNO_B;
+    }
+  return L;
+}
+
+function bailarinURL(L) {
+  let out = '';
+  for (let y = 0; y < ALTO_B; y++)
+    for (let x = 0; x < ANCHO_B; x++) {
+      const c = L[y * ANCHO_B + x];
+      if (c) out += `<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`;
+    }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${ANCHO_B} ${ALTO_B}" `
+            + `shape-rendering="crispEdges">${out}</svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+
+const CUADROS_CHICO = POSES.map(p => bailarinURL(armarBailarin(p, false)));
+const CUADROS_CHICA = POSES.map(p => bailarinURL(armarBailarin(p, true)));
+
+let cuadroB = 0;
+function pasoDeBaile() {
+  $('chico').style.backgroundImage = CUADROS_CHICO[cuadroB];
+  // Desfasada: uno sube el brazo mientras la otra lo baja.
+  $('chica').style.backgroundImage = CUADROS_CHICA[(cuadroB + 2) % POSES.length];
+  cuadroB = (cuadroB + 1) % POSES.length;
+}
+pasoDeBaile();
+setInterval(pasoDeBaile, 320);
 
 // Parpadeo cada tanto
 setInterval(() => {

@@ -1,0 +1,9 @@
+# Bases de datos: nunca deben subirse, menos a un repositorio publico.
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Archivos sueltos del sistema
+Thumbs.db
+desktop.ini

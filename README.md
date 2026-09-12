@@ -28,6 +28,12 @@ Debajo de los ojos corre la letra estilo karaoke: los renglones suben solos y ca
 va encendiendo de izquierda a derecha, como si lo fueran cantando. Arriba y abajo quedan
 los renglones vecinos apagados y desenfocados, difuminándose hacia los bordes.
 
+A los lados de la letra baila una pareja, él de un lado y ella del otro. Los cuerpos se
+arman por partes sobre una rejilla de 26×36: una "pose" dice dónde van codos, manos,
+rodillas y pies, y alternando tres poses se ve el baile. Se balancean en contratiempo, como
+si se siguieran. El canto de arriba a la izquierda de cada figura va aclarado, del lado por
+donde les da la luna.
+
 **Para poner otra letra** se cambia nada más el arreglo `LETRA` al inicio del script de
 `luz.html`: cada renglón es `{ t: 'TEXTO', d: segundos }`. El tamaño de la letra, el
 centrado y los tiempos se acomodan solos a partir de eso. Un renglón con texto vacío sirve
